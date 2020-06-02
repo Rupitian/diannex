@@ -63,6 +63,7 @@ int main(int argc, char** argv)
         std::cout << " ]"
             << "\n\t\tInterpolation Flags:"
             << "\n\t\t\tSymbol: " << project.options.interpolationFlags.symbol
+            << "\n\t\tTranslation Output: " << project.options.translationOutput
             << "\n\t\tMacros: [ ";
         for (int i = 0; i < project.options.macros.size(); i++)
         {
