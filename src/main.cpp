@@ -1,14 +1,26 @@
-#include "main.h"
+#include <iostream>
+#include <chrono> 
 
-#include <stdio.h>
+#include "Lexer.h"
+#include "Parser.h"
+
+using namespace diannex;
 
 int main(int argc, char** argv)
 {
-	printf("Testing %d\n", test(9, 10));
-	return 0;
-}
+    std::cout << "Parser testing" << std::endl;
 
-int test(int a, int b)
-{
-	return a + b;
+    std::vector<Token> res = std::vector<Token>();
+    auto start = std::chrono::high_resolution_clock::now();
+
+    Lexer::LexString("//! Test string", res);
+    std::unique_ptr<Node> parsed = Parser::ParseTokens(&res);
+
+    auto stop = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+
+    std::cout << "Took " << duration.count() << " milliseconds" << std::endl;
+    std::cin.get();
+
+	return 0;
 }
