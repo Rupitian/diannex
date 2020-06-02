@@ -1,7 +1,9 @@
 #ifndef DIANNEX_LEXER_H
 #define DIANNEX_LEXER_H
 
+#include <cstdint>
 #include <vector>
+#include <string>
 
 namespace diannex
 {

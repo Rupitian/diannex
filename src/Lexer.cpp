@@ -1,6 +1,7 @@
 #include "Lexer.h"
 
 #include <string>
+#include <memory>
 #include <sstream>
 
 namespace diannex
