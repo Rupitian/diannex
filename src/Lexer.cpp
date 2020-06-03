@@ -3,8 +3,9 @@
 #include <string>
 #include <memory>
 #include <sstream>
-#include <fstream>
-#include <queue>
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 namespace diannex
 {
@@ -20,6 +21,7 @@ namespace diannex
             length = code.length();
             line = 1;
             column = 1;
+            directiveFollowup = false;
         }
 
         uint32_t position;
@@ -198,9 +200,8 @@ namespace diannex
         }
     };
 
-    void Lexer::LexString(const std::string& in, std::vector<Token>& out)
+    void Lexer::LexString(const std::string& in, LexerContext& ctx, std::vector<Token>& out)
     {
-        std::queue<std::string> lexQueue;
         CodeReader cr = CodeReader(in);
 
         if (cr.matchChars(0xEF, 0xBB, 0xBF))
@@ -258,7 +259,9 @@ namespace diannex
                         continue;
                     }
 
-                    lexQueue.push(ss.str());
+                    fs::path p = fs::absolute(ctx.currentFile).parent_path();
+                    p /= ss.str();
+                    ctx.queue.push(p.string());
                     continue;
                 }
             }
@@ -754,20 +757,6 @@ namespace diannex
                     cr.advanceChar();
                 }
             }
-        }
-
-        while (!lexQueue.empty())
-        {
-            std::string queued = lexQueue.front();
-            lexQueue.pop();
-            std::string buf, line;
-            std::ifstream f(queued);
-            while (std::getline(f, line))
-            {
-                buf += line;
-                buf.push_back('\n');
-            }
-            LexString(buf, out);
         }
     }
 

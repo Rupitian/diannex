@@ -4,6 +4,9 @@
 #include <cstdint>
 #include <vector>
 #include <string>
+#include <queue>
+
+#include "Project.h"
 
 namespace diannex
 {
@@ -151,10 +154,17 @@ namespace diannex
 
     const char* tokenToString(Token t);
 
+    struct LexerContext
+    {
+        ProjectFormat* project;
+        std::queue<std::string> queue;
+        std::string currentFile;
+    };
+
     class Lexer
     {
     public:
-        static void LexString(const std::string& in, std::vector<Token>& out);
+        static void LexString(const std::string& in, LexerContext& ctx, std::vector<Token>& out);
     private:
         Lexer();
     };

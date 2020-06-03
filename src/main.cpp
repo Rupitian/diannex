@@ -85,8 +85,15 @@ int main(int argc, char** argv)
     std::vector<Token> res = std::vector<Token>();
     auto start = std::chrono::high_resolution_clock::now();
 
+    LexerContext context;
+    context.project = &project;
     for (auto& file : project.options.files)
+        context.queue.push(file);
+
+    while (!context.queue.empty())
     {
+        std::string file = context.queue.front();
+        context.queue.pop();
         std::string buf, line;
         std::ifstream f(file);
         while (std::getline(f, line))
@@ -94,7 +101,8 @@ int main(int argc, char** argv)
             buf += line;
             buf.push_back('\n');
         }
-        Lexer::LexString(buf, res);
+        context.currentFile = file;
+        Lexer::LexString(buf, context, res);
     }
     //std::unique_ptr<Node> parsed = Parser::ParseTokens(&res);
 
