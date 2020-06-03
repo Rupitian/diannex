@@ -25,7 +25,8 @@ int main(int argc, char** argv)
 
     options.add_options()
             ("p,project", "Load project file", cxxopts::value<std::string>())
-            ("g,generate", "Generate new project file", cxxopts::value<std::string>()->implicit_value(fs::current_path().filename().string()));
+            ("g,generate", "Generate new project file", cxxopts::value<std::string>()->implicit_value(fs::current_path().filename().string()))
+            ("h,help", "Shows this message");
 
     auto result = options.parse(argc, argv);
 
@@ -78,7 +79,11 @@ int main(int argc, char** argv)
         loaded = true;
     }
 
-    if (!loaded) return 0;
+    if (!loaded)
+    {
+        std::cout << options.help() << std::endl;
+        return 0;
+    }
 
     std::cout << "Lexer testing" << std::endl;
 
