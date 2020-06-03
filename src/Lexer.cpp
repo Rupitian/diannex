@@ -3,6 +3,8 @@
 #include <string>
 #include <memory>
 #include <sstream>
+#include <fstream>
+#include <queue>
 
 namespace diannex
 {
@@ -24,6 +26,7 @@ namespace diannex
         uint32_t length;
         uint32_t line;
         uint16_t column;
+        bool directiveFollowup;
 
         char peekChar()
         {
@@ -197,6 +200,7 @@ namespace diannex
 
     void Lexer::LexString(const std::string& in, std::vector<Token>& out)
     {
+        std::queue<std::string> lexQueue;
         CodeReader cr = CodeReader(in);
 
         if (cr.matchChars(0xEF, 0xBB, 0xBF))
@@ -206,6 +210,58 @@ namespace diannex
         {
             if (cr.skipWhitespace())
                 break;
+
+            if (cr.directiveFollowup)
+            {
+                Token t = out.back(); //  Get directive token
+                out.pop_back();
+                cr.directiveFollowup = false;
+
+                if (t.type != TokenType::Directive)
+                {
+                    // Previous token wasn't a directive, push an error token and try to continue
+                    out.push_back(Token(TokenType::Error, t.line, t.column));
+                    continue;
+                }
+
+                if (t.keywordType == KeywordType::Include)
+                {
+                    char curr = cr.peekChar();
+                    uint32_t line = cr.line;
+                    uint16_t col = cr.column;
+
+                    if (curr != '"')
+                    {
+                        // Token wasn't a string like we expected, push an error token and try to continue
+                        out.push_back(Token(TokenType::Error, line, col));
+                        continue;
+                    }
+
+                    cr.advanceChar();
+
+                    std::stringstream ss(std::ios_base::app | std::ios_base::out);
+                    bool foundEnd = false;
+                    while (cr.position < cr.length)
+                    {
+                        curr = cr.readChar();
+                        if (curr == '"')
+                        {
+                            foundEnd = true;
+                            break;
+                        }
+                        ss << curr;
+                    }
+
+                    if (!foundEnd)
+                    {
+                        out.push_back(Token(TokenType::ErrorUnenclosedString, line, col));
+                        continue;
+                    }
+
+                    lexQueue.push(ss.str());
+                    continue;
+                }
+            }
 
             if (cr.readComment())
                 continue;
@@ -274,18 +330,26 @@ namespace diannex
                     std::unique_ptr<std::string> identifier = cr.readIdentifier();
                     if (identifier)
                     {
-                        if (identifier->compare("include") == 0)
+                        cr.directiveFollowup = true;
+                        if (identifier->compare("include") == 0) {
                             out.push_back(Token(TokenType::Directive, line, col, KeywordType::Include));
-                        else if (identifier->compare("exclude") == 0)
+                        }
+                        else if (identifier->compare("exclude") == 0) {
                             out.push_back(Token(TokenType::Directive, line, col, KeywordType::Exclude));
-                        else if (identifier->compare("macro") == 0)
+                        }
+                        else if (identifier->compare("macro") == 0) {
                             out.push_back(Token(TokenType::Directive, line, col, KeywordType::Macro));
-                        else if (identifier->compare("ifdef") == 0)
+                        }
+                        else if (identifier->compare("ifdef") == 0) {
                             out.push_back(Token(TokenType::Directive, line, col, KeywordType::IfDef));
-                        else if (identifier->compare("endif") == 0)
+                        }
+                        else if (identifier->compare("endif") == 0) {
                             out.push_back(Token(TokenType::Directive, line, col, KeywordType::EndIf));
-                        else
+                        }
+                        else {
                             out.push_back(Token(TokenType::ErrorString, line, col, *identifier.get()));
+                            cr.directiveFollowup = false;
+                        }
                     }
                     else
                     {
@@ -690,6 +754,20 @@ namespace diannex
                     cr.advanceChar();
                 }
             }
+        }
+
+        while (!lexQueue.empty())
+        {
+            std::string queued = lexQueue.front();
+            lexQueue.pop();
+            std::string buf, line;
+            std::ifstream f(queued);
+            while (std::getline(f, line))
+            {
+                buf += line;
+                buf.push_back('\n');
+            }
+            LexString(buf, out);
         }
     }
 
