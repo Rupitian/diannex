@@ -18,6 +18,9 @@ void load_project(std::string path, ProjectFormat& proj);
 
 int main(int argc, char** argv)
 {
+    ProjectFormat project;
+    bool loaded = false;
+
     cxxopts::Options options("diannex", "Universal tool for the diannex dialogue system");
 
     options.add_options()
@@ -41,8 +44,8 @@ int main(int argc, char** argv)
     if (result.count("project"))
     {
         // TODO: Clean this up, perhaps put it in a class method
-        ProjectFormat project;
         load_project(result["project"].as<std::string>(), project);
+#pragma region Print Project
         std::cout << result["project"].as<std::string>() << ":"
             << "\n\tProject Name: " << project.name
             << "\n\tProject Authors: [ ";
@@ -71,23 +74,313 @@ int main(int argc, char** argv)
             std::cout << project.options.macros[i];
         }
         std::cout << " ]" << std::endl;
+#pragma endregion
+        loaded = true;
     }
 
-    std::cout << "Parser testing" << std::endl;
+    if (!loaded) return 0;
+
+    std::cout << "Lexer testing" << std::endl;
 
     std::vector<Token> res = std::vector<Token>();
     auto start = std::chrono::high_resolution_clock::now();
 
-    Lexer::LexString("//! Test string", res);
-    std::unique_ptr<Node> parsed = Parser::ParseTokens(&res);
+    for (auto& file : project.options.files)
+    {
+        std::string buf, line;
+        std::ifstream f(file);
+        while (std::getline(f, line))
+        {
+            buf += line;
+            buf.push_back('\n');
+        }
+        Lexer::LexString(buf, res);
+    }
+    //std::unique_ptr<Node> parsed = Parser::ParseTokens(&res);
 
     auto stop = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
 
-    std::cout << "Took " << duration.count() << " milliseconds" << std::endl;
-    std::cin.get();
+    std::cout << "Took " << duration.count() << " milliseconds\n" << std::endl;
+    std::cout << "Tokens:" << std::endl;
 
-	return 0;
+    for (auto& token : res)
+    {
+        // TODO: Make this a << overload on Token?
+        std::cout << "[" << token.line << ":" << token.column << "] ";
+        switch (token.type)
+        {
+            case Identifier:
+                std::cout << "Identifier";
+                break;
+            case Number:
+                std::cout << "Number";
+                break;
+            case Percentage:
+                std::cout << "Percentage";
+                break;
+            case String:
+                std::cout << "String";
+                break;
+            case MarkedString:
+                std::cout << "MarkedString";
+                break;
+            case ExcludeString:
+                std::cout << "ExcludeString";
+                break;
+            case GroupKeyword:
+                std::cout << "GroupKeyword";
+                break;
+            case MainKeyword:
+                std::cout << "MainKeyword";
+                break;
+            case MainSubKeyword:
+                std::cout << "MainSubKeyword";
+                break;
+            case ModifierKeyword:
+                std::cout << "ModifierKeyword";
+                break;
+            case OpenParen:
+                std::cout << "OpenParen";
+                break;
+            case CloseParen:
+                std::cout << "CloseParen";
+                break;
+            case OpenCurly:
+                std::cout << "OpenCurly";
+                break;
+            case CloseCurly:
+                std::cout << "CloseCurly";
+                break;
+            case OpenBrack:
+                std::cout << "OpenBrack";
+                break;
+            case CloseBrack:
+                std::cout << "CloseBrack";
+                break;
+            case Semicolon:
+                std::cout << "Semicolon";
+                break;
+            case Colon:
+                std::cout << "Colon";
+                break;
+            case Comma:
+                std::cout << "Comma";
+                break;
+            case Ternary:
+                std::cout << "Ternary";
+                break;
+            case VariableStart:
+                std::cout << "VariableStart";
+                break;
+            case Equals:
+                std::cout << "Equals";
+                break;
+            case Plus:
+                std::cout << "Plus";
+                break;
+            case Increment:
+                std::cout << "Increment";
+                break;
+            case PlusEquals:
+                std::cout << "PlusEquals";
+                break;
+            case Minus:
+                std::cout << "Minus";
+                break;
+            case Decrement:
+                std::cout << "Decrement";
+                break;
+            case MinusEquals:
+                std::cout << "MinusEquals";
+                break;
+            case Multiply:
+                std::cout << "Multiply";
+                break;
+            case Power:
+                std::cout << "Power";
+                break;
+            case MultiplyEquals:
+                std::cout << "MultiplyEquals";
+                break;
+            case Divide:
+                std::cout << "Divide";
+                break;
+            case DivideEquals:
+                std::cout << "DivideEquals";
+                break;
+            case Mod:
+                std::cout << "Mod";
+                break;
+            case ModEquals:
+                std::cout << "ModEquals";
+                break;
+            case Not:
+                std::cout << "Not";
+                break;
+            case CompareEQ:
+                std::cout << "CompareEQ";
+                break;
+            case CompareGT:
+                std::cout << "CompareGT";
+                break;
+            case CompareLT:
+                std::cout << "CompareLT";
+                break;
+            case CompareGTE:
+                std::cout << "CompareGTE";
+                break;
+            case CompareLTE:
+                std::cout << "CompareLTE";
+                break;
+            case CompareNEQ:
+                std::cout << "CompareNEQ";
+                break;
+            case LogicalAnd:
+                std::cout << "LogicalAnd";
+                break;
+            case LogicalOr:
+                std::cout << "LogicalOr";
+                break;
+            case BitwiseLShift:
+                std::cout << "BitwiseLShift";
+                break;
+            case BitwiseRShift:
+                std::cout << "BitwiseRShift";
+                break;
+            case BitwiseAnd:
+                std::cout << "BitwiseAnd";
+                break;
+            case BitwiseAndEquals:
+                std::cout << "BitwiseAndEquals";
+                break;
+            case BitwiseOr:
+                std::cout << "BitwiseOr";
+                break;
+            case BitwiseOrEquals:
+                std::cout << "BitwiseOrEquals";
+                break;
+            case BitwiseXor:
+                std::cout << "BitwiseXor";
+                break;
+            case BitwiseXorEquals:
+                std::cout << "BitwiseXorEquals";
+                break;
+            case BitwiseNegate:
+                std::cout << "BitwiseNegate";
+                break;
+            case Directive:
+                std::cout << "Directive";
+                break;
+            case MarkedComment:
+                std::cout << "MarkedComment";
+                break;
+            case Error:
+                std::cout << "Error";
+                break;
+            case ErrorString:
+                std::cout << "ErrorString";
+                break;
+            case ErrorUnenclosedString:
+                std::cout << "ErrorUnenclosedString";
+                break;
+        }
+
+        std::cout << ": ";
+
+        if (token.type >= TokenType::GroupKeyword && token.type <= TokenType::ModifierKeyword)
+        {
+            switch (token.keywordType)
+            {
+                case None:
+                    std::cout << "None";
+                    break;
+                case Namespace:
+                    std::cout << "Namespace";
+                    break;
+                case Scene:
+                    std::cout << "Scene";
+                    break;
+                case Def:
+                    std::cout << "Def";
+                    break;
+                case Func:
+                    std::cout << "Func";
+                    break;
+                case Choice:
+                    std::cout << "Choice";
+                    break;
+                case Choose:
+                    std::cout << "Choose";
+                    break;
+                case If:
+                    std::cout << "If";
+                    break;
+                case Else:
+                    std::cout << "Else";
+                    break;
+                case While:
+                    std::cout << "While";
+                    break;
+                case For:
+                    std::cout << "For";
+                    break;
+                case Do:
+                    std::cout << "Do";
+                    break;
+                case Repeat:
+                    std::cout << "Repeat";
+                    break;
+                case Switch:
+                    std::cout << "Switch";
+                    break;
+                case Continue:
+                    std::cout << "Continue";
+                    break;
+                case Break:
+                    std::cout << "Break";
+                    break;
+                case Return:
+                    std::cout << "Return";
+                    break;
+                case Require:
+                    std::cout << "Require";
+                    break;
+                case Chance:
+                    std::cout << "Chance";
+                    break;
+                case Local:
+                    std::cout << "Local";
+                    break;
+                case Global:
+                    std::cout << "Global";
+                    break;
+                case Macro:
+                    std::cout << "Macro";
+                    break;
+                case Include:
+                    std::cout << "Include";
+                    break;
+                case Exclude:
+                    std::cout << "Exclude";
+                    break;
+                case IfDef:
+                    std::cout << "IfDef";
+                    break;
+                case EndIf:
+                    std::cout << "EndIf";
+                    break;
+            }
+        }
+        else
+        {
+            std::cout << token.content;
+        }
+        
+        std::cout << std::endl;
+    }
+    
+    return 0;
 }
 
 void generate_project(std::string name)
