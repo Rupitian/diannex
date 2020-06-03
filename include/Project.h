@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 namespace diannex
 {
@@ -27,7 +28,7 @@ namespace diannex
         std::string translationOutput;
 
         // Predefined macros/defines to be used in source files. default: None
-        std::vector<std::string> macros;
+        std::unordered_map<std::string, std::string> macros;
     };
 
     struct ProjectFormat

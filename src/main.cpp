@@ -86,10 +86,15 @@ int main(int argc, char** argv)
             << "\n\t\t\tSymbol: " << project.options.interpolationFlags.symbol
             << "\n\t\tTranslation Output: " << project.options.translationOutput
             << "\n\t\tMacros: [ ";
-        for (int i = 0; i < project.options.macros.size(); i++)
+        bool comma = false;
+        for (auto& macro : project.options.macros)
         {
-            if (i != 0) std::cout << ", ";
-            std::cout << project.options.macros[i];
+            if (comma)
+                std::cout << ", ";
+            else
+                comma = true;
+
+            std::cout << macro.first;
         }
         std::cout << " ]" << std::endl;
 #pragma endregion
@@ -540,7 +545,8 @@ void load_project(std::string path, ProjectFormat& proj)
     {
         for (auto& macro : project["options"]["macros"])
         {
-            proj.options.macros.push_back(macro.get<std::string>());
+            // TODO: Allow the value to actually be set
+            proj.options.macros.insert(std::make_pair(macro.get<std::string>(), "true"));
         }
     }
 }

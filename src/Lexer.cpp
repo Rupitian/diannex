@@ -264,6 +264,56 @@ namespace diannex
                     ctx.queue.push(p.string());
                     continue;
                 }
+                else if (t.keywordType == KeywordType::IfDef || t.keywordType == KeywordType::IfNDef)
+                {
+                    bool invert = t.keywordType == KeywordType::IfNDef;
+                    int line = cr.line, column = cr.column;
+                    std::unique_ptr<std::string> identifier = cr.readIdentifier();
+                    if (!identifier)
+                    {
+                        out.emplace_back(TokenType::Error, line, column);
+                        continue;
+                    }
+
+                    bool skip = ctx.project->options.macros.find(*identifier) == ctx.project->options.macros.end();
+                    if (invert) skip = !skip;
+
+                    if (skip)
+                    {
+                        int level = 1;
+                        while (cr.position < cr.length && level > 0)
+                        {
+                            char curr = cr.peekChar();
+                            if (curr == '\n')
+                            {
+                                cr.line++;
+                                cr.column = 0;
+                            }
+
+                            if (curr == '#')
+                            {
+                                cr.advanceChar();
+                                if (cr.matchChars('i', 'f'))
+                                {
+                                    level++;
+                                }
+                                else if (cr.matchChars('e', 'n', 'd'))
+                                {
+                                    level--;
+                                    cr.advanceChar(5);
+                                }
+                                continue;
+                            }
+
+                            cr.advanceChar();
+                        }
+
+                        if (level > 0)
+                            out.emplace_back(TokenType::Error, cr.line, cr.column, "Unclosed directive");
+                    }
+
+                    continue;
+                }
             }
 
             if (cr.readComment())
@@ -333,9 +383,9 @@ namespace diannex
                     std::unique_ptr<std::string> identifier = cr.readIdentifier();
                     if (identifier)
                     {
-                        if (identifier->compare("include") == 0) 
+                        cr.directiveFollowup = true;
+                        if (identifier->compare("include") == 0)
                         {
-                            cr.directiveFollowup = true;
                             out.push_back(Token(TokenType::Directive, line, col, KeywordType::Include));
                         }
                         else if (identifier->compare("exclude") == 0) 
