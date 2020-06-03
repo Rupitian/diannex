@@ -116,10 +116,10 @@ namespace diannex
         Global,
 
         // Directive keywords
-        Macro,
         Include,
         Exclude,
         IfDef,
+        IfNDef,
         EndIf
     };
 

@@ -410,9 +410,6 @@ int main(int argc, char** argv)
                     case Global:
                         std::cout << "Global";
                         break;
-                    case Macro:
-                        std::cout << "Macro";
-                        break;
                     case Include:
                         std::cout << "Include";
                         break;
@@ -421,6 +418,9 @@ int main(int argc, char** argv)
                         break;
                     case IfDef:
                         std::cout << "IfDef";
+                        break;
+                    case IfNDef:
+                        std::cout << "IfNDef";
                         break;
                     case EndIf:
                         std::cout << "EndIf";

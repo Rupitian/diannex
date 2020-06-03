@@ -333,25 +333,30 @@ namespace diannex
                     std::unique_ptr<std::string> identifier = cr.readIdentifier();
                     if (identifier)
                     {
-                        cr.directiveFollowup = true;
-                        if (identifier->compare("include") == 0) {
+                        if (identifier->compare("include") == 0) 
+                        {
+                            cr.directiveFollowup = true;
                             out.push_back(Token(TokenType::Directive, line, col, KeywordType::Include));
                         }
-                        else if (identifier->compare("exclude") == 0) {
+                        else if (identifier->compare("exclude") == 0) 
+                        {
                             out.push_back(Token(TokenType::Directive, line, col, KeywordType::Exclude));
                         }
-                        else if (identifier->compare("macro") == 0) {
-                            out.push_back(Token(TokenType::Directive, line, col, KeywordType::Macro));
-                        }
-                        else if (identifier->compare("ifdef") == 0) {
+                        else if (identifier->compare("ifdef") == 0)
+                        {
                             out.push_back(Token(TokenType::Directive, line, col, KeywordType::IfDef));
                         }
-                        else if (identifier->compare("endif") == 0) {
+                        else if (identifier->compare("ifndef") == 0)
+                        {
+                            out.push_back(Token(TokenType::Directive, line, col, KeywordType::IfNDef));
+                        }
+                        else if (identifier->compare("endif") == 0) 
+                        {
                             out.push_back(Token(TokenType::Directive, line, col, KeywordType::EndIf));
                         }
-                        else {
+                        else 
+                        {
                             out.push_back(Token(TokenType::ErrorString, line, col, *identifier.get()));
-                            cr.directiveFollowup = false;
                         }
                     }
                     else
