@@ -2,6 +2,7 @@
 #include <fstream>
 #include <chrono>
 #include <filesystem>
+#include <exception>
 
 #include "libs/json.hpp"
 #include "libs/cxxopts.hpp"
@@ -120,7 +121,7 @@ int main(int argc, char** argv)
         try
         {
             if (!fs::exists(file))
-                throw std::exception("File does not exist.");
+                throw std::runtime_error("File does not exist.");
             std::ifstream f(file, std::ios::in); 
             f.seekg(0, std::ios::end);
             buf.reserve(f.tellg());
@@ -452,7 +453,7 @@ void generate_project(std::string name)
     try
     {
         if (!fs::exists(path))
-            throw std::exception("File does not exist.");
+            throw std::runtime_error("File does not exist.");
         std::ofstream ofs(path, std::ios::out);
         ofs << project.dump(4);
         ofs.close();
@@ -470,7 +471,7 @@ void load_project(std::string path, ProjectFormat& proj)
     try
     {
         if (!fs::exists(path))
-            throw std::exception("File does not exist.");
+            throw std::runtime_error("File does not exist.");
         std::ifstream ifs(path, std::ios::in);
         ifs >> project;
         ifs.close();
