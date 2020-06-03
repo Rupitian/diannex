@@ -16,24 +16,40 @@ namespace fs = std::filesystem;
 void generate_project(std::string name);
 void load_project(std::string path, ProjectFormat& proj);
 
+cxxopts::ParseResult parse_options(int argc, char** argv, cxxopts::Options& options)
+{
+    try
+    {
+        return options.parse(argc, argv);
+    }
+    catch (const cxxopts::OptionException& e)
+    {
+        std::cout << "Error parsing options: " << e.what() << std::endl << std::endl;
+        std::cout << options.help() << std::endl;
+        exit(1);
+    }
+}
+
 int main(int argc, char** argv)
 {
     ProjectFormat project;
     bool loaded = false;
+    bool fatalError = false;
 
     cxxopts::Options options("diannex", "Universal tool for the diannex dialogue system");
 
-    options.add_options()
+    options
+        .add_options()
             ("p,project", "Load project file", cxxopts::value<std::string>())
             ("g,generate", "Generate new project file", cxxopts::value<std::string>()->implicit_value(fs::current_path().filename().string()))
             ("h,help", "Shows this message");
 
-    auto result = options.parse(argc, argv);
+    auto result = parse_options(argc, argv, options);
 
     if (result.count("project") && result.count("generate"))
     {
         std::cout << options.help() << "\nCan't define --project and --generate at the same time!" << std::endl;
-        return -1;
+        return 1;
     }
 
     if (result.count("generate"))
@@ -85,7 +101,8 @@ int main(int argc, char** argv)
         return 0;
     }
 
-    std::cout << "Lexer testing" << std::endl;
+    std::cout << "Beginning compilation process..." << std::endl;
+    std::cout << "Currently: lexer testing" << std::endl;
 
     std::vector<Token> res = std::vector<Token>();
     auto start = std::chrono::high_resolution_clock::now();
@@ -99,16 +116,35 @@ int main(int argc, char** argv)
     {
         std::string file = context.queue.front();
         context.queue.pop();
-        std::string buf, line;
-        std::ifstream f(file);
-        while (std::getline(f, line))
+        std::string buf;
+        try
         {
-            buf += line;
-            buf.push_back('\n');
+            if (!fs::exists(file))
+                throw std::exception("File does not exist.");
+            std::ifstream f(file, std::ios::in); 
+            f.seekg(0, std::ios::end);
+            buf.reserve(f.tellg());
+            f.seekg(0, std::ios::beg);
+
+            buf.assign((std::istreambuf_iterator<char>(f)),
+                        std::istreambuf_iterator<char>());
+        }
+        catch (const std::exception& e)
+        {
+            std::cout << "Failed to read file '" << file << "': " << e.what() << std::endl;
+            fatalError = true;
+            continue;
         }
         context.currentFile = file;
         Lexer::LexString(buf, context, res);
     }
+
+    if (fatalError)
+    {
+        std::cout << "Not proceeding with compilation due to fatal errors." << std::endl;
+        return 1;
+    }
+
     //std::unique_ptr<Node> parsed = Parser::ParseTokens(&res);
 
     auto stop = std::chrono::high_resolution_clock::now();
@@ -412,17 +448,38 @@ void generate_project(std::string name)
             }}
     };
 
-    std::ofstream ofs(name + ".json", std::ios::out);
-    ofs << project.dump(4);
-    ofs.close();
+    const std::string path = name + ".json";
+    try
+    {
+        if (!fs::exists(path))
+            throw std::exception("File does not exist.");
+        std::ofstream ofs(path, std::ios::out);
+        ofs << project.dump(4);
+        ofs.close();
+    }
+    catch (const std::exception& e)
+    {
+        std::cout << "Failed to write project file at '" << path + "':" << e.what() << std::endl;
+        exit(1);
+    }
 }
 
 void load_project(std::string path, ProjectFormat& proj)
 {
-    std::ifstream ifs(path, std::ios::out);
     nlohmann::json project;
-    ifs >> project;
-    ifs.close();
+    try
+    {
+        if (!fs::exists(path))
+            throw std::exception("File does not exist.");
+        std::ifstream ifs(path, std::ios::in);
+        ifs >> project;
+        ifs.close();
+    }
+    catch (const std::exception& e)
+    {
+        std::cout << "Failed to load project file: " << e.what() << std::endl;
+        exit(1);
+    }
 
     proj.name = project.contains("name") ?
             project["name"].get<std::string>() :
