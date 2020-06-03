@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include <queue>
+#include <unordered_map>
 
 #include "Project.h"
 
@@ -159,6 +160,7 @@ namespace diannex
         ProjectFormat* project;
         std::queue<std::string> queue;
         std::string currentFile;
+        std::unordered_map<std::string, std::vector<Token>> tokenList;
     };
 
     class Lexer

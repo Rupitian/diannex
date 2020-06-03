@@ -117,11 +117,14 @@ int main(int argc, char** argv)
     {
         std::string file = context.queue.front();
         context.queue.pop();
+
         std::string buf;
         try
         {
             if (!fs::exists(file))
                 throw std::runtime_error("File does not exist.");
+            if (context.tokenList.find(fs::absolute(file).string()) != context.tokenList.end())
+                continue; // Already tokenized this file
             std::ifstream f(file, std::ios::in); 
             f.seekg(0, std::ios::end);
             buf.reserve(f.tellg());
@@ -137,7 +140,9 @@ int main(int argc, char** argv)
             continue;
         }
         context.currentFile = file;
-        Lexer::LexString(buf, context, res);
+        std::vector<Token> tokens;
+        Lexer::LexString(buf, context, tokens);
+        context.tokenList.insert(std::make_pair(fs::absolute(file).string(), tokens));
     }
 
     if (fatalError)
