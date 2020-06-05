@@ -342,10 +342,6 @@ namespace diannex
                         {
                             out.emplace_back(TokenType::Directive, line, col, KeywordType::Include);
                         }
-                        else if (identifier->compare("exclude") == 0) 
-                        {
-                            out.emplace_back(TokenType::Directive, line, col, KeywordType::Exclude);
-                        }
                         else if (identifier->compare("ifdef") == 0)
                         {
                             out.emplace_back(TokenType::Directive, line, col, KeywordType::IfDef);

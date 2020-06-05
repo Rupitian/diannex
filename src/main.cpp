@@ -418,9 +418,6 @@ int main(int argc, char** argv)
                     case Include:
                         std::cout << "Include";
                         break;
-                    case Exclude:
-                        std::cout << "Exclude";
-                        break;
                     case IfDef:
                         std::cout << "IfDef";
                         break;

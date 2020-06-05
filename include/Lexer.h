@@ -117,7 +117,6 @@ namespace diannex
 
         // Directive keywords
         Include,
-        Exclude,
         IfDef,
         IfNDef,
         EndIf
