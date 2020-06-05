@@ -221,7 +221,7 @@ namespace diannex
                 if (t.type != TokenType::Directive)
                 {
                     // Previous token wasn't a directive, push an error token and try to continue
-                    out.push_back(Token(TokenType::Error, t.line, t.column));
+                    out.emplace_back(TokenType::Error, t.line, t.column);
                     continue;
                 }
 
@@ -234,7 +234,7 @@ namespace diannex
                     if (curr != '"')
                     {
                         // Token wasn't a string like we expected, push an error token and try to continue
-                        out.push_back(Token(TokenType::Error, line, col));
+                        out.emplace_back(TokenType::Error, line, col);
                         continue;
                     }
 
@@ -255,7 +255,7 @@ namespace diannex
 
                     if (!foundEnd)
                     {
-                        out.push_back(Token(TokenType::ErrorUnenclosedString, line, col));
+                        out.emplace_back(TokenType::ErrorUnenclosedString, line, col);
                         continue;
                     }
 
@@ -334,7 +334,7 @@ namespace diannex
                     }
                 }
 
-                out.push_back(Token(TokenType::MarkedComment, cr.line, col, in.substr(base, cr.position - base)));
+                out.emplace_back(TokenType::MarkedComment, cr.line, col, in.substr(base, cr.position - base));
             }
             else if (cr.matchChars('/', '*', '!')) // Marked comment multi-line
             {
@@ -364,7 +364,7 @@ namespace diannex
                     }
                 }
 
-                out.push_back(Token(TokenType::MarkedComment, line, col, in.substr(base, cr.position - base)));
+                out.emplace_back(TokenType::MarkedComment, line, col, in.substr(base, cr.position - base));
 
                 if (foundEnd)
                     cr.advanceChar(2);
@@ -386,32 +386,32 @@ namespace diannex
                         cr.directiveFollowup = true;
                         if (identifier->compare("include") == 0)
                         {
-                            out.push_back(Token(TokenType::Directive, line, col, KeywordType::Include));
+                            out.emplace_back(TokenType::Directive, line, col, KeywordType::Include);
                         }
                         else if (identifier->compare("exclude") == 0) 
                         {
-                            out.push_back(Token(TokenType::Directive, line, col, KeywordType::Exclude));
+                            out.emplace_back(TokenType::Directive, line, col, KeywordType::Exclude);
                         }
                         else if (identifier->compare("ifdef") == 0)
                         {
-                            out.push_back(Token(TokenType::Directive, line, col, KeywordType::IfDef));
+                            out.emplace_back(TokenType::Directive, line, col, KeywordType::IfDef);
                         }
                         else if (identifier->compare("ifndef") == 0)
                         {
-                            out.push_back(Token(TokenType::Directive, line, col, KeywordType::IfNDef));
+                            out.emplace_back(TokenType::Directive, line, col, KeywordType::IfNDef);
                         }
                         else if (identifier->compare("endif") == 0) 
                         {
-                            out.push_back(Token(TokenType::Directive, line, col, KeywordType::EndIf));
+                            out.emplace_back(TokenType::Directive, line, col, KeywordType::EndIf);
                         }
                         else 
                         {
-                            out.push_back(Token(TokenType::ErrorString, line, col, *identifier.get()));
+                            out.emplace_back(TokenType::ErrorString, line, col, *identifier.get());
                         }
                     }
                     else
                     {
-                        out.push_back(Token(TokenType::Error, line, col));
+                        out.emplace_back(TokenType::Error, line, col);
                     }
                 }
                 else if ((curr >= '0' && curr <= '9') || curr == '.') // Number or percentage
@@ -443,9 +443,9 @@ namespace diannex
                     }
 
                     if (isPercent)
-                        out.push_back(Token(TokenType::Percentage, line, col, in.substr(base, cr.position - base - 1)));
+                        out.emplace_back(TokenType::Percentage, line, col, in.substr(base, cr.position - base - 1));
                     else
-                        out.push_back(Token(TokenType::Number, line, col, in.substr(base, cr.position - base)));
+                        out.emplace_back(TokenType::Number, line, col, in.substr(base, cr.position - base));
                 }
                 else if (curr == '"' || cr.matchChars('@', '"') || cr.matchChars('!', '"')) // Strings
                 {
@@ -512,14 +512,14 @@ namespace diannex
                     if (foundEnd)
                     {
                         if (type == '"')
-                            out.push_back(Token(TokenType::String, line, col, ss.str()));
+                            out.emplace_back(TokenType::String, line, col, ss.str());
                         else if (type == '@')
-                            out.push_back(Token(TokenType::MarkedString, line, col, ss.str()));
+                            out.emplace_back(TokenType::MarkedString, line, col, ss.str());
                         else // if (type == '!')
-                            out.push_back(Token(TokenType::ExcludeString, line, col, ss.str()));
+                            out.emplace_back(TokenType::ExcludeString, line, col, ss.str());
                     }
                     else
-                        out.push_back(Token(TokenType::ErrorUnenclosedString, line, col));
+                        out.emplace_back(TokenType::ErrorUnenclosedString, line, col);
                 }
                 else
                 {
@@ -528,46 +528,46 @@ namespace diannex
                     switch (curr)
                     {
                     case '(':
-                        out.push_back(Token(TokenType::OpenParen, line, col));
+                        out.emplace_back(TokenType::OpenParen, line, col);
                         break;
                     case ')':
-                        out.push_back(Token(TokenType::CloseParen, line, col));
+                        out.emplace_back(TokenType::CloseParen, line, col);
                         break;
                     case '{':
-                        out.push_back(Token(TokenType::OpenCurly, line, col));
+                        out.emplace_back(TokenType::OpenCurly, line, col);
                         break;
                     case '}':
-                        out.push_back(Token(TokenType::CloseCurly, line, col));
+                        out.emplace_back(TokenType::CloseCurly, line, col);
                         break;
                     case '[':
-                        out.push_back(Token(TokenType::OpenBrack, line, col));
+                        out.emplace_back(TokenType::OpenBrack, line, col);
                         break;
                     case ']':
-                        out.push_back(Token(TokenType::CloseBrack, line, col));
+                        out.emplace_back(TokenType::CloseBrack, line, col);
                         break;
                     case ';':
-                        out.push_back(Token(TokenType::Semicolon, line, col));
+                        out.emplace_back(TokenType::Semicolon, line, col);
                         break;
                     case ':':
-                        out.push_back(Token(TokenType::Colon, line, col));
+                        out.emplace_back(TokenType::Colon, line, col);
                         break;
                     case ',':
-                        out.push_back(Token(TokenType::Comma, line, col));
+                        out.emplace_back(TokenType::Comma, line, col);
                         break;
                     case '?':
-                        out.push_back(Token(TokenType::Ternary, line, col));
+                        out.emplace_back(TokenType::Ternary, line, col);
                         break;
                     case '$':
-                        out.push_back(Token(TokenType::VariableStart, line, col));
+                        out.emplace_back(TokenType::VariableStart, line, col);
                         break;
                     case '=':
                         if (cr.position + 1 < cr.length && cr.peekCharNext() == '=')
                         {
                             cr.advanceChar();
-                            out.push_back(Token(TokenType::CompareEQ, line, col));
+                            out.emplace_back(TokenType::CompareEQ, line, col);
                         }
                         else
-                            out.push_back(Token(TokenType::Equals, line, col));
+                            out.emplace_back(TokenType::Equals, line, col);
                         break;
                     case '+':
                         if (cr.position + 1 < cr.length)
@@ -576,18 +576,18 @@ namespace diannex
                             if (n == '+')
                             {
                                 cr.advanceChar();
-                                out.push_back(Token(TokenType::Increment, line, col));
+                                out.emplace_back(TokenType::Increment, line, col);
                             }
                             else if (n == '=')
                             {
                                 cr.advanceChar();
-                                out.push_back(Token(TokenType::PlusEquals, line, col));
+                                out.emplace_back(TokenType::PlusEquals, line, col);
                             }
                             else
-                                out.push_back(Token(TokenType::Plus, line, col));
+                                out.emplace_back(TokenType::Plus, line, col);
                         }
                         else
-                            out.push_back(Token(TokenType::Plus, line, col));
+                            out.emplace_back(TokenType::Plus, line, col);
                         break;
                     case '-':
                         if (cr.position + 1 < cr.length)
@@ -596,18 +596,18 @@ namespace diannex
                             if (n == '-')
                             {
                                 cr.advanceChar();
-                                out.push_back(Token(TokenType::Decrement, line, col));
+                                out.emplace_back(TokenType::Decrement, line, col);
                             }
                             else if (n == '=')
                             {
                                 cr.advanceChar();
-                                out.push_back(Token(TokenType::MinusEquals, line, col));
+                                out.emplace_back(TokenType::MinusEquals, line, col);
                             }
                             else
-                                out.push_back(Token(TokenType::Minus, line, col));
+                                out.emplace_back(TokenType::Minus, line, col);
                         }
                         else
-                            out.push_back(Token(TokenType::Minus, line, col));
+                            out.emplace_back(TokenType::Minus, line, col);
                         break;
                     case '*':
                         if (cr.position + 1 < cr.length)
@@ -616,45 +616,45 @@ namespace diannex
                             if (n == '*')
                             {
                                 cr.advanceChar();
-                                out.push_back(Token(TokenType::Power, line, col));
+                                out.emplace_back(TokenType::Power, line, col);
                             }
                             else if (n == '=')
                             {
                                 cr.advanceChar();
-                                out.push_back(Token(TokenType::MultiplyEquals, line, col));
+                                out.emplace_back(TokenType::MultiplyEquals, line, col);
                             }
                             else
-                                out.push_back(Token(TokenType::Multiply, line, col));
+                                out.emplace_back(TokenType::Multiply, line, col);
                         }
                         else
-                            out.push_back(Token(TokenType::Multiply, line, col));
+                            out.emplace_back(TokenType::Multiply, line, col);
                         break;
                     case '/':
                         if (cr.position + 1 < cr.length && cr.peekCharNext() == '=')
                         {
                             cr.advanceChar();
-                            out.push_back(Token(TokenType::DivideEquals, line, col));
+                            out.emplace_back(TokenType::DivideEquals, line, col);
                         }
                         else
-                            out.push_back(Token(TokenType::Divide, line, col));
+                            out.emplace_back(TokenType::Divide, line, col);
                         break;
                     case '%':
                         if (cr.position + 1 < cr.length && cr.peekCharNext() == '=')
                         {
                             cr.advanceChar();
-                            out.push_back(Token(TokenType::ModEquals, line, col));
+                            out.emplace_back(TokenType::ModEquals, line, col);
                         }
                         else
-                            out.push_back(Token(TokenType::Mod, line, col));
+                            out.emplace_back(TokenType::Mod, line, col);
                         break;
                     case '!': // doesn't apply to string literals; that's a special string type
                         if (cr.position + 1 < cr.length && cr.peekCharNext() == '=')
                         {
                             cr.advanceChar();
-                            out.push_back(Token(TokenType::CompareNEQ, line, col));
+                            out.emplace_back(TokenType::CompareNEQ, line, col);
                         }
                         else
-                            out.push_back(Token(TokenType::Not, line, col));
+                            out.emplace_back(TokenType::Not, line, col);
                         break;
                     case '>':
                         if (cr.position + 1 < cr.length)
@@ -663,18 +663,18 @@ namespace diannex
                             if (n == '=')
                             {
                                 cr.advanceChar();
-                                out.push_back(Token(TokenType::CompareGTE, line, col));
+                                out.emplace_back(TokenType::CompareGTE, line, col);
                             }
                             else if (n == '>')
                             {
                                 cr.advanceChar();
-                                out.push_back(Token(TokenType::BitwiseRShift, line, col));
+                                out.emplace_back(TokenType::BitwiseRShift, line, col);
                             }
                             else
-                                out.push_back(Token(TokenType::CompareGT, line, col));
+                                out.emplace_back(TokenType::CompareGT, line, col);
                         }
                         else
-                            out.push_back(Token(TokenType::CompareGT, line, col));
+                            out.emplace_back(TokenType::CompareGT, line, col);
                         break;
                     case '<':
                         if (cr.position + 1 < cr.length)
@@ -683,18 +683,18 @@ namespace diannex
                             if (n == '=')
                             {
                                 cr.advanceChar();
-                                out.push_back(Token(TokenType::CompareLTE, line, col));
+                                out.emplace_back(TokenType::CompareLTE, line, col);
                             }
                             else if (n == '<')
                             {
                                 cr.advanceChar();
-                                out.push_back(Token(TokenType::BitwiseLShift, line, col));
+                                out.emplace_back(TokenType::BitwiseLShift, line, col);
                             }
                             else
-                                out.push_back(Token(TokenType::CompareLT, line, col));
+                                out.emplace_back(TokenType::CompareLT, line, col);
                         }
                         else
-                            out.push_back(Token(TokenType::CompareLT, line, col));
+                            out.emplace_back(TokenType::CompareLT, line, col);
                         break;
                     case '&':
                         if (cr.position + 1 < cr.length)
@@ -703,18 +703,18 @@ namespace diannex
                             if (n == '&')
                             {
                                 cr.advanceChar();
-                                out.push_back(Token(TokenType::LogicalAnd, line, col));
+                                out.emplace_back(TokenType::LogicalAnd, line, col);
                             }
                             else if (n == '=')
                             {
                                 cr.advanceChar();
-                                out.push_back(Token(TokenType::BitwiseAndEquals, line, col));
+                                out.emplace_back(TokenType::BitwiseAndEquals, line, col);
                             }
                             else
-                                out.push_back(Token(TokenType::BitwiseAnd, line, col));
+                                out.emplace_back(TokenType::BitwiseAnd, line, col);
                         }
                         else
-                            out.push_back(Token(TokenType::BitwiseAnd, line, col));
+                            out.emplace_back(TokenType::BitwiseAnd, line, col);
                         break;
                     case '|':
                         if (cr.position + 1 < cr.length)
@@ -723,81 +723,81 @@ namespace diannex
                             if (n == '|')
                             {
                                 cr.advanceChar();
-                                out.push_back(Token(TokenType::LogicalOr, line, col));
+                                out.emplace_back(TokenType::LogicalOr, line, col);
                             }
                             else if (n == '=')
                             {
                                 cr.advanceChar();
-                                out.push_back(Token(TokenType::BitwiseOrEquals, line, col));
+                                out.emplace_back(TokenType::BitwiseOrEquals, line, col);
                             }
                             else
-                                out.push_back(Token(TokenType::BitwiseOr, line, col));
+                                out.emplace_back(TokenType::BitwiseOr, line, col);
                         }
                         else
-                            out.push_back(Token(TokenType::BitwiseOr, line, col));
+                            out.emplace_back(TokenType::BitwiseOr, line, col);
                         break;
                     case '^':
                         if (cr.position + 1 < cr.length && cr.peekCharNext() == '=')
                         {
                             cr.advanceChar();
-                            out.push_back(Token(TokenType::BitwiseXorEquals, line, col));
+                            out.emplace_back(TokenType::BitwiseXorEquals, line, col);
                         }
                         else
-                            out.push_back(Token(TokenType::BitwiseXor, line, col));
+                            out.emplace_back(TokenType::BitwiseXor, line, col);
                         break;
                     case '~':
-                        out.push_back(Token(TokenType::BitwiseNegate, line, col));
+                        out.emplace_back(TokenType::BitwiseNegate, line, col);
                         break;
                     default: // Must be an identifier, or it's invalid
                         std::unique_ptr<std::string> identifier = cr.readIdentifier();
                         if (identifier)
                         {
                             if (identifier->compare("namespace") == 0)
-                                out.push_back(Token(TokenType::GroupKeyword, line, col, KeywordType::Namespace));
+                                out.emplace_back(TokenType::GroupKeyword, line, col, KeywordType::Namespace);
                             else if (identifier->compare("scene") == 0)
-                                out.push_back(Token(TokenType::GroupKeyword, line, col, KeywordType::Scene));
+                                out.emplace_back(TokenType::GroupKeyword, line, col, KeywordType::Scene);
                             else if (identifier->compare("def") == 0)
-                                out.push_back(Token(TokenType::GroupKeyword, line, col, KeywordType::Def));
+                                out.emplace_back(TokenType::GroupKeyword, line, col, KeywordType::Def);
                             else if (identifier->compare("func") == 0)
-                                out.push_back(Token(TokenType::GroupKeyword, line, col, KeywordType::Func));
+                                out.emplace_back(TokenType::GroupKeyword, line, col, KeywordType::Func);
                             else if (identifier->compare("choice") == 0)
-                                out.push_back(Token(TokenType::MainKeyword, line, col, KeywordType::Choice));
+                                out.emplace_back(TokenType::MainKeyword, line, col, KeywordType::Choice);
                             else if (identifier->compare("choose") == 0)
-                                out.push_back(Token(TokenType::MainKeyword, line, col, KeywordType::Choose));
+                                out.emplace_back(TokenType::MainKeyword, line, col, KeywordType::Choose);
                             else if (identifier->compare("if") == 0)
-                                out.push_back(Token(TokenType::MainKeyword, line, col, KeywordType::If));
+                                out.emplace_back(TokenType::MainKeyword, line, col, KeywordType::If);
                             else if (identifier->compare("else") == 0)
-                                out.push_back(Token(TokenType::MainKeyword, line, col, KeywordType::Else));
+                                out.emplace_back(TokenType::MainKeyword, line, col, KeywordType::Else);
                             else if (identifier->compare("while") == 0)
-                                out.push_back(Token(TokenType::MainKeyword, line, col, KeywordType::While));
+                                out.emplace_back(TokenType::MainKeyword, line, col, KeywordType::While);
                             else if (identifier->compare("for") == 0)
-                                out.push_back(Token(TokenType::MainKeyword, line, col, KeywordType::For));
+                                out.emplace_back(TokenType::MainKeyword, line, col, KeywordType::For);
                             else if (identifier->compare("do") == 0)
-                                out.push_back(Token(TokenType::MainKeyword, line, col, KeywordType::Do));
+                                out.emplace_back(TokenType::MainKeyword, line, col, KeywordType::Do);
                             else if (identifier->compare("repeat") == 0)
-                                out.push_back(Token(TokenType::MainKeyword, line, col, KeywordType::Repeat));
+                                out.emplace_back(TokenType::MainKeyword, line, col, KeywordType::Repeat);
                             else if (identifier->compare("switch") == 0)
-                                out.push_back(Token(TokenType::MainKeyword, line, col, KeywordType::Switch));
+                                out.emplace_back(TokenType::MainKeyword, line, col, KeywordType::Switch);
                             else if (identifier->compare("continue") == 0)
-                                out.push_back(Token(TokenType::MainKeyword, line, col, KeywordType::Continue));
+                                out.emplace_back(TokenType::MainKeyword, line, col, KeywordType::Continue);
                             else if (identifier->compare("break") == 0)
-                                out.push_back(Token(TokenType::MainKeyword, line, col, KeywordType::Break));
+                                out.emplace_back(TokenType::MainKeyword, line, col, KeywordType::Break);
                             else if (identifier->compare("return") == 0)
-                                out.push_back(Token(TokenType::MainKeyword, line, col, KeywordType::Return));
+                                out.emplace_back(TokenType::MainKeyword, line, col, KeywordType::Return);
                             else if (identifier->compare("require") == 0)
-                                out.push_back(Token(TokenType::MainSubKeyword, line, col, KeywordType::Require));
+                                out.emplace_back(TokenType::MainSubKeyword, line, col, KeywordType::Require);
                             else if (identifier->compare("chance") == 0)
-                                out.push_back(Token(TokenType::MainSubKeyword, line, col, KeywordType::Chance));
+                                out.emplace_back(TokenType::MainSubKeyword, line, col, KeywordType::Chance);
                             else if (identifier->compare("local") == 0)
-                                out.push_back(Token(TokenType::ModifierKeyword, line, col, KeywordType::Local));
+                                out.emplace_back(TokenType::ModifierKeyword, line, col, KeywordType::Local);
                             else if (identifier->compare("global") == 0)
-                                out.push_back(Token(TokenType::ModifierKeyword, line, col, KeywordType::Global));
+                                out.emplace_back(TokenType::ModifierKeyword, line, col, KeywordType::Global);
                             else
-                                out.push_back(Token(TokenType::Identifier, line, col, *identifier.get()));
+                                out.emplace_back(TokenType::Identifier, line, col, *identifier.get());
                         }
                         else
                         {
-                            out.push_back(Token(TokenType::Error, line, col));
+                            out.emplace_back(TokenType::Error, line, col);
 
                             // Ignore all further error tokens on this line
                             uint32_t line = cr.line;
