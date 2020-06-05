@@ -94,7 +94,7 @@ int main(int argc, char** argv)
             else
                 comma = true;
 
-            std::cout << macro.first;
+            std::cout << macro.first << '=' << macro.second;
         }
         std::cout << " ]" << std::endl;
 #pragma endregion
@@ -542,8 +542,16 @@ void load_project(std::string path, ProjectFormat& proj)
     {
         for (auto& macro : project["options"]["macros"])
         {
-            // TODO: Allow the value to actually be set
-            proj.options.macros.insert(std::make_pair(macro.get<std::string>(), "true"));
+            auto macro_str = macro.get<std::string>();
+            auto pos = macro_str.find('=');
+            if (pos == std::string::npos)
+            {
+                proj.options.macros.insert(std::make_pair(macro_str, ""));
+            }
+            else
+            {
+                proj.options.macros.insert(std::make_pair(macro_str.substr(0, pos), macro_str.substr(pos+1)));
+            }
         }
     }
 }
