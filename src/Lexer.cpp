@@ -21,6 +21,8 @@ namespace diannex
             length = code.length();
             line = 1;
             column = 1;
+            skip = -1;
+            stack = 0;
             directiveFollowup = false;
         }
 
@@ -28,6 +30,8 @@ namespace diannex
         uint32_t length;
         uint32_t line;
         uint16_t column;
+        int16_t skip;
+        int16_t stack;
         bool directiveFollowup;
 
         char peekChar()
@@ -212,108 +216,58 @@ namespace diannex
             if (cr.skipWhitespace())
                 break;
 
-            if (cr.directiveFollowup)
+            if (cr.skip != -1)
             {
-                Token t = out.back(); //  Get directive token
-                out.pop_back();
-                cr.directiveFollowup = false;
-
-                if (t.type != TokenType::Directive)
+                if (cr.peekChar() == '#')
                 {
-                    // Previous token wasn't a directive, push an error token and try to continue
-                    out.emplace_back(TokenType::Error, t.line, t.column);
-                    continue;
-                }
-
-                if (t.keywordType == KeywordType::Include)
-                {
-                    char curr = cr.peekChar();
-                    uint32_t line = cr.line;
-                    uint16_t col = cr.column;
-
-                    if (curr != '"')
+                    if (cr.peekCharNext() == 'i')
                     {
-                        // Token wasn't a string like we expected, push an error token and try to continue
-                        out.emplace_back(TokenType::Error, line, col);
-                        continue;
-                    }
-
-                    cr.advanceChar();
-
-                    std::stringstream ss(std::ios_base::app | std::ios_base::out);
-                    bool foundEnd = false;
-                    while (cr.position < cr.length)
-                    {
-                        curr = cr.readChar();
-                        if (curr == '"')
+                        if (
+                                (cr.advanceChar(), cr.matchChars('i', 'f')) &&
+                                (cr.advanceChar(2), cr.peekChar() == 'n' ?
+                                                    (cr.advanceChar(), cr.matchChars('d', 'e', 'f')) :
+                                                    cr.matchChars('d', 'e', 'f')))
                         {
-                            foundEnd = true;
-                            break;
-                        }
-                        ss << curr;
-                    }
-
-                    if (!foundEnd)
-                    {
-                        out.emplace_back(TokenType::ErrorUnenclosedString, line, col);
-                        continue;
-                    }
-
-                    fs::path p = fs::absolute(ctx.currentFile).parent_path();
-                    p /= ss.str();
-                    ctx.queue.push(p.string());
-                    continue;
-                }
-                else if (t.keywordType == KeywordType::IfDef || t.keywordType == KeywordType::IfNDef)
-                {
-                    bool invert = t.keywordType == KeywordType::IfNDef;
-                    int line = cr.line, column = cr.column;
-                    std::unique_ptr<std::string> identifier = cr.readIdentifier();
-                    if (!identifier)
-                    {
-                        out.emplace_back(TokenType::Error, line, column);
-                        continue;
-                    }
-
-                    bool skip = ctx.project->options.macros.find(*identifier) == ctx.project->options.macros.end();
-                    if (invert) skip = !skip;
-
-                    if (skip)
-                    {
-                        int level = 1;
-                        while (cr.position < cr.length && level > 0)
-                        {
+                            cr.advanceChar(3);
                             char curr = cr.peekChar();
-                            if (curr == '\n')
+                            if (curr == ' ' || curr == '\t' || curr == '\r' || curr == '\v' || curr == '\f' || curr == '\n')
                             {
-                                cr.line++;
-                                cr.column = 0;
-                            }
-
-                            if (curr == '#')
-                            {
-                                cr.advanceChar();
-                                if (cr.matchChars('i', 'f'))
+                                if (curr == '\n')
                                 {
-                                    level++;
+                                    cr.line++;
+                                    cr.column = 0;
                                 }
-                                else if (cr.matchChars('e', 'n', 'd'))
-                                {
-                                    level--;
-                                    cr.advanceChar(5);
-                                }
-                                continue;
+                                cr.stack++;
                             }
-
-                            cr.advanceChar();
                         }
-
-                        if (level > 0)
-                            out.emplace_back(TokenType::Error, cr.line, cr.column, "Unclosed directive");
                     }
-
-                    continue;
+                    else if (cr.peekCharNext() == 'e')
+                    {
+                        if (
+                                (cr.advanceChar(), cr.matchChars('e', 'n', 'd')) &&
+                                (cr.advanceChar(3), cr.matchChars('i', 'f')))
+                        {
+                            cr.advanceChar(2);
+                            char curr = cr.peekChar();
+                            if (curr == ' ' || curr == '\t' || curr == '\r' || curr == '\v' || curr == '\f' || curr == '\n')
+                            {
+                                if (curr == '\n')
+                                {
+                                    cr.line++;
+                                    cr.column = 0;
+                                }
+                                cr.stack--;
+                                if (cr.stack == cr.skip)
+                                {
+                                    cr.skip = -1;
+                                }
+                            }
+                        }
+                    }
                 }
+
+                cr.advanceChar();
+                continue;
             }
 
             if (cr.readComment())
@@ -810,6 +764,94 @@ namespace diannex
                         continue; // Skip the advanceChar call
                     }
                     cr.advanceChar();
+                }
+            }
+
+            if (cr.directiveFollowup)
+            {
+                Token t = out.back(); //  Get directive token
+                out.pop_back();
+                cr.directiveFollowup = false;
+
+                if (t.type != TokenType::Directive)
+                {
+                    // Previous token wasn't a directive, push an error token and try to continue
+                    out.emplace_back(TokenType::Error, t.line, t.column);
+                    continue;
+                }
+
+                if (t.keywordType == KeywordType::Include)
+                {
+                    if (cr.skipWhitespace())
+                    {
+                        out.emplace_back(TokenType::Error, cr.line, cr.column, "Unexpected EOF");
+                        break;
+                    }
+
+                    char curr = cr.peekChar();
+                    uint32_t line = cr.line;
+                    uint16_t col = cr.column;
+
+                    if (curr != '"')
+                    {
+                        // Token wasn't a string like we expected, push an error token and try to continue
+                        out.emplace_back(TokenType::Error, line, col);
+                        continue;
+                    }
+
+                    cr.advanceChar();
+
+                    std::stringstream ss(std::ios_base::app | std::ios_base::out);
+                    bool foundEnd = false;
+                    while (cr.position < cr.length)
+                    {
+                        curr = cr.readChar();
+                        if (curr == '"')
+                        {
+                            foundEnd = true;
+                            break;
+                        }
+                        ss << curr;
+                    }
+
+                    if (!foundEnd)
+                    {
+                        out.emplace_back(TokenType::ErrorUnenclosedString, line, col);
+                        continue;
+                    }
+
+                    fs::path p = fs::absolute(ctx.currentFile).parent_path();
+                    p /= ss.str();
+                    ctx.queue.push(p.string());
+                }
+                else if (t.keywordType == KeywordType::IfDef || t.keywordType == KeywordType::IfNDef)
+                {
+                    if (cr.skipWhitespace())
+                    {
+                        out.emplace_back(TokenType::Error, cr.line, cr.column, "Unexpected EOF");
+                        break;
+                    }
+
+                    bool invert = t.keywordType == KeywordType::IfNDef;
+                    int line = cr.line, column = cr.column;
+                    std::unique_ptr<std::string> identifier = cr.readIdentifier();
+                    if (!identifier)
+                    {
+                        out.emplace_back(TokenType::Error, line, column);
+                        continue;
+                    }
+
+                    bool skip = ctx.project->options.macros.find(*identifier) == ctx.project->options.macros.end();
+                    if (invert) skip = !skip;
+
+                    if (skip)
+                        cr.skip = cr.stack;
+
+                    cr.stack++;
+                }
+                else if (t.keywordType == KeywordType::EndIf)
+                {
+                    out.emplace_back(TokenType::Error, t.line, t.column, "Trailing #endif");
                 }
             }
         }
