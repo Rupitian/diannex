@@ -236,7 +236,6 @@ namespace diannex
                             {
                                 if (curr == '\n')
                                 {
-                                    out.emplace_back(TokenType::Newline, cr.line, cr.column);
                                     cr.line++;
                                     cr.column = 0;
                                 }
@@ -256,7 +255,6 @@ namespace diannex
                             {
                                 if (curr == '\n')
                                 {
-                                    out.emplace_back(TokenType::Newline, cr.line, cr.column);
                                     cr.line++;
                                     cr.column = 0;
                                 }
