@@ -106,7 +106,7 @@ namespace diannex
                         return false;
                     else
                     {
-						out.emplace_back(TokenType::Newline, line, column);
+                        out.emplace_back(TokenType::Newline, line, column);
                         line++;
                         column = 0;
                     }
@@ -217,7 +217,7 @@ namespace diannex
             if (cr.skipWhitespace(out))
                 break;
 
-			// Directive checks when necessary
+            // Directive checks when necessary
             if (cr.skip != -1)
             {
                 if (cr.peekChar() == '#')
@@ -236,7 +236,7 @@ namespace diannex
                             {
                                 if (curr == '\n')
                                 {
-									out.emplace_back(TokenType::Newline, cr.line, cr.column);
+                                    out.emplace_back(TokenType::Newline, cr.line, cr.column);
                                     cr.line++;
                                     cr.column = 0;
                                 }
@@ -256,7 +256,7 @@ namespace diannex
                             {
                                 if (curr == '\n')
                                 {
-									out.emplace_back(TokenType::Newline, cr.line, cr.column);
+                                    out.emplace_back(TokenType::Newline, cr.line, cr.column);
                                     cr.line++;
                                     cr.column = 0;
                                 }
@@ -317,7 +317,7 @@ namespace diannex
                     }
                     else if (curr == '\n')
                     {
-						out.emplace_back(TokenType::Newline, cr.line, cr.column);
+                        out.emplace_back(TokenType::Newline, cr.line, cr.column);
                         cr.line++;
                         cr.column = 1;
                     }
@@ -361,7 +361,7 @@ namespace diannex
                         }
                         else 
                         {
-							cr.directiveFollowup = false;
+                            cr.directiveFollowup = false;
                             out.emplace_back(TokenType::ErrorString, line, col, *identifier.get());
                         }
                     }

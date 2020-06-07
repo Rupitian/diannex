@@ -59,13 +59,13 @@ int main(int argc, char** argv)
         return 0;
     }
 
-	fs::path baseDirectory;
+    fs::path baseDirectory;
 
     if (result.count("project"))
     {
         // TODO: Clean this up, perhaps put it in a class method
-		std::string projectFilePath = result["project"].as<std::string>();
-		baseDirectory = fs::absolute(projectFilePath).parent_path();
+        std::string projectFilePath = result["project"].as<std::string>();
+        baseDirectory = fs::absolute(projectFilePath).parent_path();
         load_project(projectFilePath, project);
 #pragma region Print Project
         std::cout << projectFilePath << ":"
@@ -127,7 +127,7 @@ int main(int argc, char** argv)
         context.queue.pop();
         std::string buf;
         try
-		{
+        {
             if (!fs::exists(file))
                 throw std::runtime_error("File does not exist.");
             if (context.tokenList.find(file) != context.tokenList.end())
@@ -150,8 +150,8 @@ int main(int argc, char** argv)
         std::vector<Token> tokens;
         Lexer::LexString(buf, context, tokens);
 
-		// TESTING
-		ParseResult& parsed = Parser::ParseTokens(&tokens);
+        // TESTING
+        ParseResult& parsed = Parser::ParseTokens(&tokens);
 
         context.tokenList.insert(std::make_pair(file, tokens));
     }

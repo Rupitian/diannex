@@ -38,7 +38,7 @@ namespace diannex
 
         VariableStart, // $
 
-		Newline, // Used contextually as a semicolon at the end of statements
+        Newline, // Used contextually as a semicolon at the end of statements
 
         Equals, // =
         Plus, // +
