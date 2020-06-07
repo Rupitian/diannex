@@ -25,17 +25,24 @@ namespace diannex
         const char* info2;
     };
 
+	struct ParseResult
+	{
+		std::unique_ptr<class Node>& baseNode;
+		std::vector<ParseError> errors;
+	};
+
     class Parser
     {
     public:
-        static std::unique_ptr<class Node> ParseTokens(std::vector<Token>* tokens);
+        static ParseResult ParseTokens(std::vector<Token>* tokens);
 
         Parser(std::vector<Token>* tokens);
 
         void advance();
         void synchronize();
 
-        bool isMore();
+		bool isMore();
+		void skipNewlines();
         bool isNextToken(TokenType type);
 
         Token peekToken();

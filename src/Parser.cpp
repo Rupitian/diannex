@@ -6,12 +6,12 @@ namespace diannex
         Base parser
     */
 
-    std::unique_ptr<Node> Parser::ParseTokens(std::vector<Token>* tokens)
+    ParseResult Parser::ParseTokens(std::vector<Token>* tokens)
     {
         Parser parser = Parser(tokens);
+		parser.skipNewlines();
         std::unique_ptr<Node> block(Node::ParseGroupBlock(&parser, false));
-        // todo send back Parser's errors
-        return block;
+		return { block, parser.errors };
     }
 
     Parser::Parser(std::vector<Token>* tokens)
@@ -29,14 +29,15 @@ namespace diannex
 
     void Parser::synchronize()
     {
+		advance();
         while (isMore())
         {
-            advance();
             TokenType type = peekToken().type;
             if (type == TokenType::Semicolon || type == TokenType::Identifier 
                 || type == TokenType::ModifierKeyword || type == TokenType::MainKeyword
                 || type == TokenType::GroupKeyword || type == TokenType::MainSubKeyword)
                 break;
+			advance();
         }
     }
 
@@ -44,6 +45,12 @@ namespace diannex
     {
         return position < tokenCount;
     }
+
+	void Parser::skipNewlines()
+	{
+		while (isMore() && peekToken().type == TokenType::Newline)
+			advance();
+	}
 
     bool Parser::isNextToken(TokenType type)
     {
@@ -145,10 +152,15 @@ namespace diannex
         if (isNamespace)
             parser->ensureToken(TokenType::OpenCurly);
 
+		parser->skipNewlines();
+
         while (parser->isMore() && !parser->isNextToken(TokenType::CloseCurly))
         {
             res->nodes.push_back(Node::ParseGroupStatement(parser, KeywordType::None));
+			parser->skipNewlines();
         }
+
+		parser->skipNewlines();
 
         if (isNamespace)
             parser->ensureToken(TokenType::CloseCurly);
@@ -171,7 +183,9 @@ namespace diannex
         case TokenType::GroupKeyword:
             {
                 parser->advance();
+				parser->skipNewlines();
                 Token name = parser->ensureToken(TokenType::Identifier);
+				parser->skipNewlines();
                 if (name.type != TokenType::Error)
                 {
                     if (t.keywordType != KeywordType::Func)
@@ -181,11 +195,11 @@ namespace diannex
                         switch (t.keywordType)
                         {
                         case KeywordType::Namespace:
-                            return Node::ParseNamespaceBlock(parser, t.content);
+                            return Node::ParseNamespaceBlock(parser, name.content);
                         case KeywordType::Scene:
-                            return Node::ParseSceneBlock(parser, t.content);
+                            return Node::ParseSceneBlock(parser, name.content);
                         case KeywordType::Def:
-                            return Node::ParseDefinitionBlock(parser, t.content);
+                            return Node::ParseDefinitionBlock(parser, name.content);
                         }
                     }
                     else
@@ -204,6 +218,7 @@ namespace diannex
 
         case TokenType::ModifierKeyword:
             parser->advance();
+			parser->skipNewlines();
             return Node::ParseGroupStatement(parser, t.keywordType);
 
         case TokenType::MarkedComment:
@@ -231,9 +246,12 @@ namespace diannex
 
         parser->ensureToken(TokenType::OpenCurly);
 
+		parser->skipNewlines();
+
         while (parser->isMore() && !parser->isNextToken(TokenType::CloseCurly))
         {
             res->nodes.push_back(Node::ParseSceneStatement(parser, KeywordType::None));
+			parser->skipNewlines();
         }
 
         parser->ensureToken(TokenType::CloseCurly);
@@ -279,6 +297,7 @@ namespace diannex
             case TokenType::ExcludeString:
             case TokenType::MarkedString:
                 parser->advance();
+				parser->skipNewlines();
                 if (parser->peekToken().type == TokenType::Colon)
                 {
                     // todo parse shorthand char call
@@ -327,6 +346,7 @@ namespace diannex
                 break;
             case TokenType::ModifierKeyword:
                 parser->advance();
+				parser->skipNewlines();
                 return Node::ParseSceneStatement(parser, t.keywordType);
             case TokenType::MarkedComment:
                 parser->advance();
@@ -355,9 +375,12 @@ namespace diannex
 
         parser->ensureToken(TokenType::OpenCurly);
 
+		parser->skipNewlines();
+
         while (parser->isMore() && !parser->isNextToken(TokenType::CloseCurly))
         {
             res->nodes.push_back(Node::ParseDefinitionStatement(parser));
+			parser->skipNewlines();
         }
 
         parser->ensureToken(TokenType::CloseCurly);
@@ -372,6 +395,7 @@ namespace diannex
         {
         case TokenType::Identifier:
             parser->advance();
+			parser->skipNewlines();
             if (parser->ensureToken(TokenType::Equals).type != TokenType::Error)
             {
                 Token val = parser->ensureToken(TokenType::String, TokenType::ExcludeString);

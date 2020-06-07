@@ -59,12 +59,16 @@ int main(int argc, char** argv)
         return 0;
     }
 
+	fs::path baseDirectory;
+
     if (result.count("project"))
     {
         // TODO: Clean this up, perhaps put it in a class method
-        load_project(result["project"].as<std::string>(), project);
+		std::string projectFilePath = result["project"].as<std::string>();
+		baseDirectory = fs::absolute(projectFilePath).parent_path();
+        load_project(projectFilePath, project);
 #pragma region Print Project
-        std::cout << result["project"].as<std::string>() << ":"
+        std::cout << projectFilePath << ":"
             << "\n\tProject Name: " << project.name
             << "\n\tProject Authors: [ ";
         for (int i = 0; i < project.authors.size(); i++)
@@ -119,16 +123,16 @@ int main(int argc, char** argv)
 
     while (!context.queue.empty())
     {
-        std::string file = context.queue.front();
+        std::string file = (baseDirectory / context.queue.front()).string();
         context.queue.pop();
         std::string buf;
         try
-        {
+		{
             if (!fs::exists(file))
                 throw std::runtime_error("File does not exist.");
-            if (context.tokenList.find(fs::absolute(file).string()) != context.tokenList.end())
+            if (context.tokenList.find(file) != context.tokenList.end())
                 continue; // Already tokenized this file
-            std::ifstream f(file, std::ios::in); 
+            std::ifstream f(file, std::ios::in);
             f.seekg(0, std::ios::end);
             buf.reserve(f.tellg());
             f.seekg(0, std::ios::beg);
@@ -145,7 +149,11 @@ int main(int argc, char** argv)
         context.currentFile = file;
         std::vector<Token> tokens;
         Lexer::LexString(buf, context, tokens);
-        context.tokenList.insert(std::make_pair(fs::absolute(file).string(), tokens));
+
+		// TESTING
+		ParseResult& parsed = Parser::ParseTokens(&tokens);
+
+        context.tokenList.insert(std::make_pair(file, tokens));
     }
 
     if (fatalError)
@@ -153,8 +161,6 @@ int main(int argc, char** argv)
         std::cout << "Not proceeding with compilation due to fatal errors." << std::endl;
         return 1;
     }
-
-    //std::unique_ptr<Node> parsed = Parser::ParseTokens(&res);
 
     auto stop = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
@@ -460,15 +466,13 @@ void generate_project(std::string name)
     const std::string path = name + ".json";
     try
     {
-        if (!fs::exists(path))
-            throw std::runtime_error("File does not exist.");
         std::ofstream ofs(path, std::ios::out);
         ofs << project.dump(4);
         ofs.close();
     }
     catch (const std::exception& e)
     {
-        std::cout << "Failed to write project file at '" << path + "':" << e.what() << std::endl;
+        std::cout << "Failed to write project file at '" << path + "': " << e.what() << std::endl;
         exit(1);
     }
 }

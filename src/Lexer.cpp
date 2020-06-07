@@ -95,7 +95,7 @@ namespace diannex
 
         // Skips whitespace characters
         // Returns true if EOF is hit
-        bool skipWhitespace()
+        bool skipWhitespace(std::vector<Token>& out)
         {
             while (position < length)
             {
@@ -106,6 +106,7 @@ namespace diannex
                         return false;
                     else
                     {
+						out.emplace_back(TokenType::Newline, line, column);
                         line++;
                         column = 0;
                     }
@@ -117,7 +118,7 @@ namespace diannex
 
         // Reads a comment if one exists
         // Returns true if recognized
-        bool readComment()
+        bool readComment(std::vector<Token>& out)
         {
             if (peekChar() == '/')
             {
@@ -137,7 +138,7 @@ namespace diannex
                         while (position < length && thisLine == line)
                         {
                             advanceChar();
-                            skipWhitespace();
+                            skipWhitespace(out);
                         }
 
                         return true;
@@ -213,9 +214,10 @@ namespace diannex
 
         while (cr.position < cr.length)
         {
-            if (cr.skipWhitespace())
+            if (cr.skipWhitespace(out))
                 break;
 
+			// Directive checks when necessary
             if (cr.skip != -1)
             {
                 if (cr.peekChar() == '#')
@@ -234,6 +236,7 @@ namespace diannex
                             {
                                 if (curr == '\n')
                                 {
+									out.emplace_back(TokenType::Newline, cr.line, cr.column);
                                     cr.line++;
                                     cr.column = 0;
                                 }
@@ -253,6 +256,7 @@ namespace diannex
                             {
                                 if (curr == '\n')
                                 {
+									out.emplace_back(TokenType::Newline, cr.line, cr.column);
                                     cr.line++;
                                     cr.column = 0;
                                 }
@@ -270,7 +274,7 @@ namespace diannex
                 continue;
             }
 
-            if (cr.readComment())
+            if (cr.readComment(out))
                 continue;
             if (cr.matchChars('/', '/', '!')) // Marked comment single-line
             {
@@ -313,6 +317,7 @@ namespace diannex
                     }
                     else if (curr == '\n')
                     {
+						out.emplace_back(TokenType::Newline, cr.line, cr.column);
                         cr.line++;
                         cr.column = 1;
                     }
@@ -333,7 +338,7 @@ namespace diannex
                     cr.advanceChar();
 
                     // Read the directive type
-                    cr.skipWhitespace();
+                    cr.skipWhitespace(out);
                     std::unique_ptr<std::string> identifier = cr.readIdentifier();
                     if (identifier)
                     {
@@ -356,6 +361,7 @@ namespace diannex
                         }
                         else 
                         {
+							cr.directiveFollowup = false;
                             out.emplace_back(TokenType::ErrorString, line, col, *identifier.get());
                         }
                     }
@@ -754,7 +760,7 @@ namespace diannex
                             while (cr.position < cr.length && cr.line == line)
                             {
                                 cr.advanceChar();
-                                cr.skipWhitespace();
+                                cr.skipWhitespace(out);
                             }
                         }
                         continue; // Skip the advanceChar call
@@ -769,16 +775,9 @@ namespace diannex
                 out.pop_back();
                 cr.directiveFollowup = false;
 
-                if (t.type != TokenType::Directive)
-                {
-                    // Previous token wasn't a directive, push an error token and try to continue
-                    out.emplace_back(TokenType::Error, t.line, t.column);
-                    continue;
-                }
-
                 if (t.keywordType == KeywordType::Include)
                 {
-                    if (cr.skipWhitespace())
+                    if (cr.skipWhitespace(out))
                     {
                         out.emplace_back(TokenType::Error, cr.line, cr.column, "Unexpected EOF");
                         break;
@@ -822,7 +821,7 @@ namespace diannex
                 }
                 else if (t.keywordType == KeywordType::IfDef || t.keywordType == KeywordType::IfNDef)
                 {
-                    if (cr.skipWhitespace())
+                    if (cr.skipWhitespace(out))
                     {
                         out.emplace_back(TokenType::Error, cr.line, cr.column, "Unexpected EOF");
                         break;
