@@ -9,6 +9,20 @@ namespace fs = std::filesystem;
 
 namespace diannex
 {
+    // Token constructors
+    Token::Token(TokenType type, uint32_t line, uint16_t column)
+        : type(type), line(line), column(column)
+    {
+    }
+    Token::Token(TokenType type, uint32_t line, uint16_t column, KeywordType keywordType)
+        : type(type), line(line), column(column), keywordType(keywordType)
+    {
+    }
+    Token::Token(TokenType type, uint32_t line, uint16_t column, std::string content)
+        : type(type), line(line), column(column), content(content)
+    {
+    }
+
     // Utility class for reading code strings easily
     class CodeReader
     {
@@ -746,6 +760,10 @@ namespace diannex
                                 out.emplace_back(TokenType::ModifierKeyword, line, col, KeywordType::Local);
                             else if (identifier->compare("global") == 0)
                                 out.emplace_back(TokenType::ModifierKeyword, line, col, KeywordType::Global);
+                            else if (identifier->compare("false") == 0)
+                                out.emplace_back(TokenType::Number, line, col, "0");
+                            else if (identifier->compare("true") == 0)
+                                out.emplace_back(TokenType::Number, line, col, "1");
                             else
                                 out.emplace_back(TokenType::Identifier, line, col, *identifier.get());
                         }

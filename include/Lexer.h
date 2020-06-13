@@ -132,26 +132,9 @@ namespace diannex
         KeywordType keywordType;
         std::string content; // unused if KeywordType is known
 
-        Token(TokenType type, uint32_t line, uint16_t column)
-        {
-            this->type = type;
-            this->line = line;
-            this->column = column;
-        }
-        Token(TokenType type, uint32_t line, uint16_t column, KeywordType keywordType)
-        {
-            this->type = type;
-            this->line = line;
-            this->column = column;
-            this->keywordType = keywordType;
-        }
-        Token(TokenType type, uint32_t line, uint16_t column, std::string content)
-        {
-            this->type = type;
-            this->line = line;
-            this->column = column;
-            this->content = content;
-        }
+        Token(TokenType type, uint32_t line, uint16_t column);
+        Token(TokenType type, uint32_t line, uint16_t column, KeywordType keywordType);
+        Token(TokenType type, uint32_t line, uint16_t column, std::string content);
     };
 
     const char* tokenToString(Token t);

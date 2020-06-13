@@ -10,7 +10,7 @@ namespace diannex
     {
         Parser parser = Parser(tokens);
         parser.skipNewlines();
-        std::unique_ptr<Node> block(Node::ParseGroupBlock(&parser, false));
+        std::shared_ptr<Node> block(Node::ParseGroupBlock(&parser, false));
         return { block, parser.errors };
     }
 
@@ -114,8 +114,8 @@ namespace diannex
             return t;
         else
         {
-            errors.push_back({ ParseError::ErrorType::ExpectedTokenButGot, t.line, t.column, 
-                                    tokenToString(Token(type, 0, 0, keywordType)), tokenToString(t) });
+            errors.push_back({ ParseError::ErrorType::ExpectedTokenButGot, t.line, t.column,
+                                tokenToString(Token(type, 0, 0, keywordType)), tokenToString(t) });
             return Token(TokenType::Error, 0, 0);
         }
     }
@@ -125,8 +125,8 @@ namespace diannex
     */
 
     Node::Node(NodeType type)
+        : type(type)
     {
-        this->type = type;
         this->nodes = std::vector<Node*>();
     }
 
@@ -136,9 +136,8 @@ namespace diannex
             delete s;
     }
 
-    NodeContent::NodeContent(std::string content, NodeType type) : Node(type)
+    NodeContent::NodeContent(std::string content, NodeType type) : Node(type), content(content)
     {
-        this->content = content;
     }
 
     /*
@@ -240,6 +239,25 @@ namespace diannex
         Scene/function statements
     */
 
+    Node* Node::ParseSceneBlock(Parser* parser)
+    {
+        Node* res = new Node(NodeType::SceneBlock);
+
+        parser->ensureToken(TokenType::OpenCurly);
+
+        parser->skipNewlines();
+
+        while (parser->isMore() && !parser->isNextToken(TokenType::CloseCurly))
+        {
+            res->nodes.push_back(Node::ParseSceneStatement(parser, KeywordType::None));
+            parser->skipNewlines();
+        }
+
+        parser->ensureToken(TokenType::CloseCurly);
+
+        return res;
+    }
+
     Node* Node::ParseSceneBlock(Parser* parser, std::string name)
     {
         NodeContent* res = new NodeContent(name, NodeType::Scene);
@@ -317,7 +335,16 @@ namespace diannex
                 case KeywordType::Choose:
                     break;
                 case KeywordType::If:
-                    break;
+                {
+                    parser->advance();
+                    Node* condition = Node::ParseExpression(parser);
+                    parser->skipNewlines();
+                    Node* block = Node::ParseSceneBlock(parser);
+                    Node* res = new Node(NodeType::If);
+                    res->nodes.push_back(condition);
+                    res->nodes.push_back(block);
+                    return res;
+                }
                 case KeywordType::Else:
                     break;
                 case KeywordType::While:
@@ -360,9 +387,57 @@ namespace diannex
         return nullptr;
     }
 
-    NodeTextRun::NodeTextRun(std::string content, bool excludeTranslation) : NodeContent(content, NodeType::TextRun)
+    Node* Node::ParseExpression(Parser* parser)
     {
-        this->excludeTranslation = excludeTranslation;
+        parser->skipNewlines();
+        return ParseExprLast(parser);
+    }
+
+    Node* Node::ParseExprLast(Parser* parser)
+    {
+        parser->skipNewlines();
+
+        if (parser->isMore())
+        {
+            Token t = parser->peekToken();
+            switch (t.type)
+            {
+            case TokenType::Number:
+            case TokenType::String:
+            case TokenType::MarkedString:
+            case TokenType::ExcludeString:
+                parser->advance();
+                return new NodeToken(NodeType::ExprConstant, t);
+            case TokenType::VariableStart:
+                parser->advance();
+                if (parser->isMore())
+                {
+                    t = parser->ensureToken(TokenType::Identifier);
+                    if (t.type != TokenType::Error)
+                    {
+                        // todo call ParseSingleVar function here
+                    }
+                }
+                parser->errors.push_back({ ParseError::ErrorType::UnexpectedEOF });
+                return nullptr;
+            }
+
+            parser->errors.push_back({ ParseError::ErrorType::UnexpectedToken, t.line, t.column, tokenToString(t) });
+            return nullptr;
+        }
+
+        parser->errors.push_back({ ParseError::ErrorType::UnexpectedEOF });
+        return nullptr;
+    }
+
+    NodeTextRun::NodeTextRun(std::string content, bool excludeTranslation) 
+        : NodeContent(content, NodeType::TextRun), excludeTranslation(excludeTranslation)
+    {
+    }
+
+    NodeToken::NodeToken(NodeType type, Token token) 
+        : Node(type), token(token)
+    {
     }
 
     /*
@@ -415,10 +490,8 @@ namespace diannex
         return nullptr;
     }
 
-    NodeDefinition::NodeDefinition(std::string key, std::string value, bool excludeValueTranslation) : Node(NodeType::Definition)
+    NodeDefinition::NodeDefinition(std::string key, std::string value, bool excludeValueTranslation) 
+        : Node(NodeType::Definition), key(key), value(value), excludeValueTranslation(excludeValueTranslation)
     {
-        this->key = key;
-        this->value = value;
-        this->excludeValueTranslation = excludeValueTranslation;
     }
 }

@@ -15,7 +15,8 @@ namespace diannex
             ExpectedTokenButEOF,
             UnexpectedToken,
             UnexpectedModifierFor,
-            UnexpectedMarkedString
+            UnexpectedMarkedString,
+            UnexpectedEOF
         };
 
         ErrorType type;
@@ -27,7 +28,7 @@ namespace diannex
 
     struct ParseResult
     {
-        std::unique_ptr<class Node>& baseNode;
+        std::shared_ptr<class Node> baseNode;
         std::vector<ParseError> errors;
     };
 
@@ -76,7 +77,12 @@ namespace diannex
             Definitions,
 
             // Scene-scope
+            SceneBlock,
             TextRun,
+
+            If,
+
+            ExprConstant,
 
             // Definitions-scope
             Definition
@@ -88,9 +94,13 @@ namespace diannex
 
         static Node* ParseDefinitionBlock(Parser* parser, std::string name);
         static Node* ParseDefinitionStatement(Parser* parser);
-
+        
+        static Node* ParseSceneBlock(Parser* parser);
         static Node* ParseSceneBlock(Parser* parser, std::string name);
         static Node* ParseSceneStatement(Parser* parser, KeywordType modifier);
+
+        static Node* ParseExpression(Parser* parser);
+        static Node* ParseExprLast(Parser* parser);
 
         Node(NodeType type);
         ~Node();
@@ -119,6 +129,14 @@ namespace diannex
     public:
         NodeTextRun(std::string content, bool excludeTranslation);
         bool excludeTranslation;
+    };
+
+    class NodeToken : public Node
+    {
+    public:
+        NodeToken(NodeType type, Token token);
+
+        Token token;
     };
 
 
