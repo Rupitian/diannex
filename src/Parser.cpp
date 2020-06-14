@@ -390,7 +390,46 @@ namespace diannex
     Node* Node::ParseExpression(Parser* parser)
     {
         parser->skipNewlines();
-        return ParseExprLast(parser);
+        return Node::ParseMulDiv(parser);
+    }
+
+    Node* Node::ParseMulDiv(Parser* parser)
+    {
+        Node* left = Node::ParseExprLast(parser);
+        if (parser->isMore())
+        {
+            Token t = parser->peekToken();
+            if (t.type == TokenType::Multiply ||
+                t.type == TokenType::Divide ||
+                t.type == TokenType::Mod ||
+                t.type == TokenType::Power)
+            {
+                parser->advance();
+
+                Node* res = new NodeToken(NodeType::ExprBinary, t);
+                res->nodes.push_back(left);
+                res->nodes.push_back(Node::ParseExprLast(parser));
+
+                // Check for additional operations with the same precedence
+                parser->skipNewlines();
+                t = parser->peekToken();
+                while (t.type == TokenType::Multiply ||
+                    t.type == TokenType::Divide ||
+                    t.type == TokenType::Mod ||
+                    t.type == TokenType::Power)
+                {
+                    parser->advance();
+
+                    Node* next = new NodeToken(NodeType::ExprBinary, t);
+                    next->nodes.push_back(res);
+                    next->nodes.push_back(Node::ParseExprLast(parser));
+                    res = next;
+                }
+
+                return res;
+            }
+        }
+        return left;
     }
 
     Node* Node::ParseExprLast(Parser* parser)
@@ -420,6 +459,54 @@ namespace diannex
                 }
                 parser->errors.push_back({ ParseError::ErrorType::UnexpectedEOF });
                 return nullptr;
+            case TokenType::Not:
+            {
+                parser->advance();
+                parser->skipNewlines();
+                Node* expr = Node::ParseExprLast(parser);
+                Node* res = new Node(NodeType::ExprNot);
+                res->nodes.push_back(expr);
+                return res;
+            }
+            case TokenType::Minus:
+            {
+                parser->advance();
+                parser->skipNewlines();
+                Node* expr = Node::ParseExprLast(parser);
+                Node* res = new Node(NodeType::ExprNegate);
+                res->nodes.push_back(expr);
+                return res;
+            }
+            case TokenType::BitwiseNegate:
+            {
+                parser->advance();
+                parser->skipNewlines();
+                Node* expr = Node::ParseExprLast(parser);
+                Node* res = new Node(NodeType::ExprBitwiseNegate);
+                res->nodes.push_back(expr);
+                return res;
+            }
+            case TokenType::OpenParen:
+            {
+                parser->advance();
+                parser->skipNewlines();
+                Node* expr = Node::ParseExpression(parser);
+                parser->skipNewlines();
+                parser->ensureToken(TokenType::CloseParen);
+                return expr;
+            }
+            case TokenType::OpenBrack:
+            {
+                // todo
+                return nullptr;
+            }
+            case TokenType::Increment:
+            case TokenType::Decrement:
+            {
+                // todo
+                return nullptr;
+            }
+
             }
 
             parser->errors.push_back({ ParseError::ErrorType::UnexpectedToken, t.line, t.column, tokenToString(t) });

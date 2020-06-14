@@ -83,6 +83,10 @@ namespace diannex
             If,
 
             ExprConstant,
+            ExprNot,
+            ExprNegate,
+            ExprBitwiseNegate,
+            ExprBinary,
 
             // Definitions-scope
             Definition
@@ -100,6 +104,7 @@ namespace diannex
         static Node* ParseSceneStatement(Parser* parser, KeywordType modifier);
 
         static Node* ParseExpression(Parser* parser);
+        static Node* ParseMulDiv(Parser* parser);
         static Node* ParseExprLast(Parser* parser);
 
         Node(NodeType type);
