@@ -390,7 +390,202 @@ namespace diannex
     Node* Node::ParseExpression(Parser* parser)
     {
         parser->skipNewlines();
-        return Node::ParseMulDiv(parser);
+        return Node::ParseConditional(parser);
+    }
+
+    Node* Node::ParseConditional(Parser* parser)
+    {
+        Node* left = Node::ParseOr(parser);
+        if (parser->isMore())
+        {
+            Token t = parser->peekToken();
+            if (t.type == TokenType::Ternary)
+            {
+                parser->advance();
+
+                Node* res = new NodeToken(NodeType::ExprTernary, t);
+                res->nodes.push_back(left);
+                res->nodes.push_back(Node::ParseExpression(parser));
+                parser->skipNewlines();
+                parser->ensureToken(TokenType::Colon);
+                res->nodes.push_back(Node::ParseExpression(parser));
+
+                return res;
+            }
+        }
+        return left;
+    }
+
+    Node* Node::ParseOr(Parser* parser)
+    {
+        Node* left = Node::ParseAnd(parser);
+        if (parser->isMore())
+        {
+            Token t = parser->peekToken();
+            if (t.type == TokenType::LogicalOr)
+            {
+                parser->advance();
+
+                Node* res = new NodeToken(NodeType::ExprBinary, t);
+                res->nodes.push_back(left);
+                res->nodes.push_back(Node::ParseExpression(parser));
+
+                return res;
+            }
+        }
+        return left;
+    }
+
+    Node* Node::ParseAnd(Parser* parser)
+    {
+        Node* left = Node::ParseCompare(parser);
+        if (parser->isMore())
+        {
+            Token t = parser->peekToken();
+            if (t.type == TokenType::LogicalAnd)
+            {
+                parser->advance();
+
+                Node* res = new NodeToken(NodeType::ExprBinary, t);
+                res->nodes.push_back(left);
+                res->nodes.push_back(Node::ParseExpression(parser));
+
+                return res;
+            }
+        }
+        return left;
+    }
+
+    Node* Node::ParseCompare(Parser* parser)
+    {
+        Node* left = Node::ParseBitwise(parser);
+        if (parser->isMore())
+        {
+            Token t = parser->peekToken();
+            if (t.type == TokenType::CompareEQ ||
+                t.type == TokenType::CompareGT ||
+                t.type == TokenType::CompareGTE ||
+                t.type == TokenType::CompareLT ||
+                t.type == TokenType::CompareLTE ||
+                t.type == TokenType::CompareNEQ)
+            {
+                parser->advance();
+
+                Node* res = new NodeToken(NodeType::ExprBinary, t);
+                res->nodes.push_back(left);
+                res->nodes.push_back(Node::ParseBitwise(parser));
+
+                return res;
+            }
+        }
+        return left;
+    }
+
+    Node* Node::ParseBitwise(Parser* parser)
+    {
+        Node* left = Node::ParseBitShift(parser);
+        if (parser->isMore())
+        {
+            Token t = parser->peekToken();
+            if (t.type == TokenType::BitwiseOr ||
+                t.type == TokenType::BitwiseAnd ||
+                t.type == TokenType::BitwiseXor)
+            {
+                parser->advance();
+
+                Node* res = new NodeToken(NodeType::ExprBinary, t);
+                res->nodes.push_back(left);
+                res->nodes.push_back(Node::ParseBitShift(parser));
+
+                // Check for additional operations with the same precedence
+                parser->skipNewlines();
+                t = parser->peekToken();
+                while (t.type == TokenType::BitwiseOr ||
+                    t.type == TokenType::BitwiseAnd ||
+                    t.type == TokenType::BitwiseXor)
+                {
+                    parser->advance();
+
+                    Node* next = new NodeToken(NodeType::ExprBinary, t);
+                    next->nodes.push_back(res);
+                    next->nodes.push_back(Node::ParseBitShift(parser));
+                    res = next;
+                }
+
+                return res;
+            }
+        }
+        return left;
+    }
+
+    Node* Node::ParseBitShift(Parser* parser)
+    {
+        Node* left = Node::ParseAddSub(parser);
+        if (parser->isMore())
+        {
+            Token t = parser->peekToken();
+            if (t.type == TokenType::BitwiseLShift ||
+                t.type == TokenType::BitwiseRShift)
+            {
+                parser->advance();
+
+                Node* res = new NodeToken(NodeType::ExprBinary, t);
+                res->nodes.push_back(left);
+                res->nodes.push_back(Node::ParseAddSub(parser));
+
+                // Check for additional operations with the same precedence
+                parser->skipNewlines();
+                t = parser->peekToken();
+                while (t.type == TokenType::BitwiseLShift ||
+                       t.type == TokenType::BitwiseRShift)
+                {
+                    parser->advance();
+
+                    Node* next = new NodeToken(NodeType::ExprBinary, t);
+                    next->nodes.push_back(res);
+                    next->nodes.push_back(Node::ParseAddSub(parser));
+                    res = next;
+                }
+
+                return res;
+            }
+        }
+        return left;
+    }
+
+    Node* Node::ParseAddSub(Parser* parser)
+    {
+        Node* left = Node::ParseMulDiv(parser);
+        if (parser->isMore())
+        {
+            Token t = parser->peekToken();
+            if (t.type == TokenType::Plus ||
+                t.type == TokenType::Minus)
+            {
+                parser->advance();
+
+                Node* res = new NodeToken(NodeType::ExprBinary, t);
+                res->nodes.push_back(left);
+                res->nodes.push_back(Node::ParseMulDiv(parser));
+
+                // Check for additional operations with the same precedence
+                parser->skipNewlines();
+                t = parser->peekToken();
+                while (t.type == TokenType::Plus ||
+                    t.type == TokenType::Minus)
+                {
+                    parser->advance();
+
+                    Node* next = new NodeToken(NodeType::ExprBinary, t);
+                    next->nodes.push_back(res);
+                    next->nodes.push_back(Node::ParseMulDiv(parser));
+                    res = next;
+                }
+
+                return res;
+            }
+        }
+        return left;
     }
 
     Node* Node::ParseMulDiv(Parser* parser)
@@ -414,9 +609,9 @@ namespace diannex
                 parser->skipNewlines();
                 t = parser->peekToken();
                 while (t.type == TokenType::Multiply ||
-                    t.type == TokenType::Divide ||
-                    t.type == TokenType::Mod ||
-                    t.type == TokenType::Power)
+                       t.type == TokenType::Divide ||
+                       t.type == TokenType::Mod ||
+                       t.type == TokenType::Power)
                 {
                     parser->advance();
 
