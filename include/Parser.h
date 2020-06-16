@@ -79,6 +79,10 @@ namespace diannex
             // Scene-scope
             SceneBlock,
             TextRun,
+            Variable,
+            Increment,
+            Decrement,
+            SceneFunction,
 
             If,
 
@@ -88,6 +92,11 @@ namespace diannex
             ExprBitwiseNegate,
             ExprBinary,
             ExprTernary,
+            ExprArray,
+            ExprPreIncrement,
+            ExprPostIncrement,
+            ExprPreDecrement,
+            ExprPostDecrement,
 
             // Definitions-scope
             Definition
@@ -103,6 +112,8 @@ namespace diannex
         static Node* ParseSceneBlock(Parser* parser);
         static Node* ParseSceneBlock(Parser* parser, std::string name);
         static Node* ParseSceneStatement(Parser* parser, KeywordType modifier);
+        static Node* ParseVariable(Parser* parser);
+        static Node* ParseFunction(Parser* parser);
 
         static Node* ParseExpression(Parser* parser);
         static Node* ParseConditional(Parser* parser);

@@ -301,14 +301,14 @@ namespace diannex
             switch (t.type)
             {
             case TokenType::Identifier:
-                parser->advance();
                 if (parser->peekToken().type == TokenType::Colon)
                 {
+                    parser->advance();
                     // todo parse shorthand char call
                 }
                 else
                 {
-                    // todo parse function call
+                    return Node::ParseFunction(parser);
                 }
                 break;
             case TokenType::String:
@@ -339,10 +339,10 @@ namespace diannex
                     parser->advance();
                     Node* condition = Node::ParseExpression(parser);
                     parser->skipNewlines();
-                    Node* block = Node::ParseSceneBlock(parser);
+                    Node* trueBranch = Node::ParseSceneStatement(parser, KeywordType::None);
                     Node* res = new Node(NodeType::If);
                     res->nodes.push_back(condition);
-                    res->nodes.push_back(block);
+                    res->nodes.push_back(trueBranch);
                     return res;
                 }
                 case KeywordType::Else:
@@ -366,11 +366,23 @@ namespace diannex
                 }
                 break;
             case TokenType::Increment:
-                // todo
-                break;
+            {
+                Node* res = new Node(NodeType::Increment);
+                parser->advance();
+                parser->skipNewlines();
+                Node* val = Node::ParseVariable(parser);
+                res->nodes.push_back(val);
+                return res;
+            }
             case TokenType::Decrement:
-                // todo
-                break;
+            {
+                Node* res = new Node(NodeType::Decrement);
+                parser->advance();
+                parser->skipNewlines();
+                Node* val = Node::ParseVariable(parser);
+                res->nodes.push_back(val);
+                return res;
+            }
             case TokenType::ModifierKeyword:
                 parser->advance();
                 parser->skipNewlines();
@@ -378,11 +390,73 @@ namespace diannex
             case TokenType::MarkedComment:
                 parser->advance();
                 return new NodeContent(t.content, NodeType::MarkedComment);
+            case TokenType::OpenCurly:
+                return Node::ParseSceneBlock(parser);
             default:
                 parser->errors.push_back({ ParseError::ErrorType::UnexpectedToken, t.line, t.column, tokenToString(t) });
                 parser->synchronize();
                 break;
             }
+        }
+        return nullptr;
+    }
+
+    Node* Node::ParseVariable(Parser* parser)
+    {
+        parser->ensureToken(TokenType::VariableStart);
+        Token name = parser->ensureToken(TokenType::Identifier);
+        if (name.type != TokenType::Error)
+        {
+            NodeContent* res = new NodeContent(name.content, NodeType::Variable);
+
+            parser->skipNewlines();
+            while (parser->isMore() && parser->peekToken().type == TokenType::OpenBrack)
+            {
+                parser->advance();
+                res->nodes.push_back(Node::ParseExpression(parser));
+                parser->skipNewlines();
+                parser->ensureToken(TokenType::CloseBrack);
+                parser->skipNewlines();
+            }
+
+            return res;
+        }
+        return nullptr;
+    }
+
+    Node* Node::ParseFunction(Parser* parser)
+    {
+        Token name = parser->ensureToken(TokenType::Identifier);
+        if (name.type != TokenType::Error)
+        {
+            NodeContent* res = new NodeContent(name.content, NodeType::SceneFunction);
+
+            parser->ensureToken(TokenType::OpenParen);
+            parser->skipNewlines();
+
+            Token t = parser->peekToken();
+            while (parser->isMore() && t.type != TokenType::CloseParen)
+            {
+                res->nodes.push_back(Node::ParseExpression(parser));
+                parser->skipNewlines();
+                if (parser->isMore())
+                {
+                    t = parser->peekToken();
+                    if (t.type != TokenType::CloseParen)
+                    {
+                        parser->advance();
+                        parser->skipNewlines();
+                        if (t.type != TokenType::Comma)
+                        {
+                            parser->errors.push_back({ ParseError::ErrorType::ExpectedTokenButGot, t.line, t.column, tokenToString(Token(TokenType::Comma, 0, 0)), tokenToString(t) });
+                            break;
+                        }
+                    }
+                }
+            }
+            parser->ensureToken(TokenType::CloseParen);
+
+            return res;
         }
         return nullptr;
     }
@@ -643,17 +717,26 @@ namespace diannex
                 parser->advance();
                 return new NodeToken(NodeType::ExprConstant, t);
             case TokenType::VariableStart:
-                parser->advance();
-                if (parser->isMore())
+            {
+                Node* val = Node::ParseVariable(parser);
+                parser->skipNewlines();
+                t = parser->peekToken();
+                if (t.type == TokenType::Increment)
                 {
-                    t = parser->ensureToken(TokenType::Identifier);
-                    if (t.type != TokenType::Error)
-                    {
-                        // todo call ParseSingleVar function here
-                    }
+                    parser->advance();
+                    Node* res = new Node(NodeType::ExprPostIncrement);
+                    res->nodes.push_back(val);
+                    return res;
                 }
-                parser->errors.push_back({ ParseError::ErrorType::UnexpectedEOF });
-                return nullptr;
+                else if (t.type == TokenType::Decrement)
+                {
+                    parser->advance();
+                    Node* res = new Node(NodeType::ExprPostDecrement);
+                    res->nodes.push_back(val);
+                    return res;
+                }
+                return val;
+            }
             case TokenType::Not:
             {
                 parser->advance();
@@ -692,16 +775,54 @@ namespace diannex
             }
             case TokenType::OpenBrack:
             {
-                // todo
-                return nullptr;
+                parser->advance();
+                parser->skipNewlines();
+                Node* res = new Node(NodeType::ExprArray);
+                t = parser->peekToken();
+                while (parser->isMore() && t.type != TokenType::CloseBrack)
+                {
+                    res->nodes.push_back(Node::ParseExpression(parser));
+                    parser->skipNewlines();
+                    if (parser->isMore())
+                    {
+                        t = parser->peekToken();
+                        if (t.type != TokenType::CloseBrack)
+                        {
+                            parser->advance();
+                            parser->skipNewlines();
+                            if (t.type != TokenType::Comma)
+                            {
+                                parser->errors.push_back({ ParseError::ErrorType::ExpectedTokenButGot, t.line, t.column, tokenToString(Token(TokenType::Comma, 0, 0)), tokenToString(t) });
+                                break;
+                            }
+                        }
+                    }
+                }
+                parser->ensureToken(TokenType::CloseBrack);
+                return res;
             }
             case TokenType::Increment:
+            {
+                Node* res = new Node(NodeType::ExprPreIncrement);
+                parser->advance();
+                parser->skipNewlines();
+                Node* val = Node::ParseVariable(parser);
+                res->nodes.push_back(val);
+                return res;
+            }
             case TokenType::Decrement:
             {
-                // todo
-                return nullptr;
+                Node* res = new Node(NodeType::ExprPreDecrement);
+                parser->advance();
+                parser->skipNewlines();
+                Node* val = Node::ParseVariable(parser);
+                res->nodes.push_back(val);
+                return res;
             }
-
+            case TokenType::Identifier:
+            {
+                return Node::ParseFunction(parser);
+            }
             }
 
             parser->errors.push_back({ ParseError::ErrorType::UnexpectedToken, t.line, t.column, tokenToString(t) });
