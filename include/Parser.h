@@ -41,12 +41,15 @@ namespace diannex
 
         void advance();
         void synchronize();
+        void storePosition();
+        void restorePosition();
 
         bool isMore();
         void skipNewlines();
         bool isNextToken(TokenType type);
 
         Token peekToken();
+        Token previousToken();
         Token ensureToken(TokenType type);
         Token ensureToken(TokenType type, TokenType type2);
         Token ensureToken(TokenType type, KeywordType keywordType);
@@ -58,6 +61,7 @@ namespace diannex
         std::vector<Token>* tokens;
         int tokenCount;
         int position;
+        int storedPosition;
     };
 
     /*
@@ -113,7 +117,7 @@ namespace diannex
         static Node* ParseSceneBlock(Parser* parser, std::string name);
         static Node* ParseSceneStatement(Parser* parser, KeywordType modifier);
         static Node* ParseVariable(Parser* parser);
-        static Node* ParseFunction(Parser* parser);
+        static Node* ParseFunction(Parser* parser, bool parentheses = true);
 
         static Node* ParseExpression(Parser* parser);
         static Node* ParseConditional(Parser* parser);

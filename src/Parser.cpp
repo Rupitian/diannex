@@ -18,7 +18,8 @@ namespace diannex
     {
         this->tokens = tokens;
         tokenCount = tokens->size();
-        this->position = 0;
+        position = 0;
+        storedPosition = 0;
         errors = std::vector<ParseError>();
     }
 
@@ -41,6 +42,16 @@ namespace diannex
         }
     }
 
+    void Parser::storePosition()
+    {
+        storedPosition = position;
+    }
+
+    void Parser::restorePosition()
+    {
+        position = storedPosition;
+    }
+
     bool Parser::isMore()
     {
         return position < tokenCount;
@@ -55,6 +66,11 @@ namespace diannex
     bool Parser::isNextToken(TokenType type)
     {
         return tokens->at(position).type == type;
+    }
+
+    Token Parser::previousToken()
+    {
+        return tokens->at(position - 1);
     }
 
     Token Parser::peekToken()
@@ -247,9 +263,26 @@ namespace diannex
 
         parser->skipNewlines();
 
+        if (Token t = parser->peekToken(); t.type == TokenType::Semicolon)
+        {
+            do
+            {
+                parser->advance();
+                parser->skipNewlines();
+            } while (parser->isMore() && (t = parser->peekToken()).type == TokenType::Semicolon);
+            parser->skipNewlines();
+        }
         while (parser->isMore() && !parser->isNextToken(TokenType::CloseCurly))
         {
             res->nodes.push_back(Node::ParseSceneStatement(parser, KeywordType::None));
+            if (Token t = parser->peekToken(); t.type == TokenType::Semicolon)
+            {
+                do
+                {
+                    parser->advance();
+                    parser->skipNewlines();
+                } while (parser->isMore() && (t = parser->peekToken()).type == TokenType::Semicolon);
+            }
             parser->skipNewlines();
         }
 
@@ -266,9 +299,26 @@ namespace diannex
 
         parser->skipNewlines();
 
+        if (Token t = parser->peekToken(); t.type == TokenType::Semicolon)
+        {
+            do
+            {
+                parser->advance();
+                parser->skipNewlines();
+            } while (parser->isMore() && (t = parser->peekToken()).type == TokenType::Semicolon);
+            parser->skipNewlines();
+        }
         while (parser->isMore() && !parser->isNextToken(TokenType::CloseCurly))
         {
             res->nodes.push_back(Node::ParseSceneStatement(parser, KeywordType::None));
+            if (Token t = parser->peekToken(); t.type == TokenType::Semicolon)
+            {
+                do
+                {
+                    parser->advance();
+                    parser->skipNewlines();
+                } while (parser->isMore() && (t = parser->peekToken()).type == TokenType::Semicolon);
+            }
             parser->skipNewlines();
         }
 
@@ -281,17 +331,10 @@ namespace diannex
     {
         Token t = parser->peekToken();
 
-        // First, skip semicolons
-        if (t.type == TokenType::Semicolon)
-        {
-            do
-            {
-                parser->advance();
-            } while (parser->isMore() && (t = parser->peekToken()).type == TokenType::Semicolon);
-        }
-
         if (t.type == TokenType::VariableStart)
         {
+            parser->advance();
+            parser->skipNewlines();
             // todo parse variable assign (and other variants like +=), increment, or decrement
         }
         else
@@ -308,7 +351,7 @@ namespace diannex
                 }
                 else
                 {
-                    return Node::ParseFunction(parser);
+                    return Node::ParseFunction(parser, false);
                 }
                 break;
             case TokenType::String:
@@ -424,37 +467,100 @@ namespace diannex
         return nullptr;
     }
 
-    Node* Node::ParseFunction(Parser* parser)
+    Node* Node::ParseFunction(Parser* parser, bool parentheses)
     {
         Token name = parser->ensureToken(TokenType::Identifier);
         if (name.type != TokenType::Error)
         {
             NodeContent* res = new NodeContent(name.content, NodeType::SceneFunction);
 
-            parser->ensureToken(TokenType::OpenParen);
-            parser->skipNewlines();
-
-            Token t = parser->peekToken();
-            while (parser->isMore() && t.type != TokenType::CloseParen)
+            if (parentheses)
             {
-                res->nodes.push_back(Node::ParseExpression(parser));
                 parser->skipNewlines();
-                if (parser->isMore())
+                parser->ensureToken(TokenType::OpenParen);
+                parser->skipNewlines();
+            }
+            else
+            {
+                if (parser->peekToken().type == TokenType::OpenParen)
                 {
-                    t = parser->peekToken();
-                    if (t.type != TokenType::CloseParen)
+                    // We have to check if this call is a command or not
+                    // To do this, we check the balance of parentheses, and after the last one, if there is NOT a comma, it's a function
+                    parser->storePosition();
+                    parser->advance();
+                    Token curr = parser->peekToken();
+                    int depth = 1;
+                    while (parser->isMore() && depth != 0 && curr.type != TokenType::Newline && curr.type != TokenType::Semicolon)
                     {
+                        if (curr.type == TokenType::OpenParen)
+                            depth++;
+                        else if (curr.type == TokenType::CloseParen)
+                            depth--;
                         parser->advance();
+                        curr = parser->peekToken();
+                    }
+                    parser->skipNewlines();
+                    if (parser->peekToken().type != TokenType::Comma)
+                    {
+                        parentheses = true;
+                    }
+                    parser->restorePosition();
+                    if (parentheses)
+                    {
                         parser->skipNewlines();
-                        if (t.type != TokenType::Comma)
+                        parser->ensureToken(TokenType::OpenParen);
+                        parser->skipNewlines();
+                    }
+                }
+            }
+
+            if (parentheses)
+            {
+                Token t = parser->peekToken();
+                while (parser->isMore() && t.type != TokenType::CloseParen)
+                {
+                    res->nodes.push_back(Node::ParseExpression(parser));
+                    parser->skipNewlines();
+                    if (parser->isMore())
+                    {
+                        t = parser->peekToken();
+                        if (t.type != TokenType::CloseParen)
                         {
-                            parser->errors.push_back({ ParseError::ErrorType::ExpectedTokenButGot, t.line, t.column, tokenToString(Token(TokenType::Comma, 0, 0)), tokenToString(t) });
-                            break;
+                            parser->advance();
+                            parser->skipNewlines();
+                            if (t.type != TokenType::Comma)
+                            {
+                                parser->errors.push_back({ ParseError::ErrorType::ExpectedTokenButGot, t.line, t.column, tokenToString(Token(TokenType::Comma, 0, 0)), tokenToString(t) });
+                                break;
+                            }
+                        }
+                    }
+                }
+                parser->ensureToken(TokenType::CloseParen);
+            }
+            else
+            {
+                Token t = parser->peekToken();
+                while (parser->isMore() && t.type != TokenType::Newline && t.type != TokenType::Semicolon)
+                {
+                    res->nodes.push_back(Node::ParseExpression(parser));
+                    if (parser->isMore())
+                    {
+                        t = parser->peekToken();
+                        if (t.type != TokenType::Newline && t.type != TokenType::Semicolon)
+                        {
+                            if (parser->previousToken().type == TokenType::Newline)
+                                break;
+                            parser->advance();
+                            if (t.type != TokenType::Comma)
+                            {
+                                parser->errors.push_back({ ParseError::ErrorType::ExpectedTokenButGot, t.line, t.column, tokenToString(Token(TokenType::Comma, 0, 0)), tokenToString(t) });
+                                break;
+                            }
                         }
                     }
                 }
             }
-            parser->ensureToken(TokenType::CloseParen);
 
             return res;
         }
@@ -464,12 +570,26 @@ namespace diannex
     Node* Node::ParseExpression(Parser* parser)
     {
         parser->skipNewlines();
-        return Node::ParseConditional(parser);
+        Node* res = Node::ParseConditional(parser);
+
+        // Array parse
+        parser->skipNewlines();
+        while (parser->isMore() && parser->peekToken().type == TokenType::OpenBrack)
+        {
+            parser->advance();
+            res->nodes.push_back(Node::ParseExpression(parser));
+            parser->skipNewlines();
+            parser->ensureToken(TokenType::CloseBrack);
+            parser->skipNewlines();
+        }
+
+        return res;
     }
 
     Node* Node::ParseConditional(Parser* parser)
     {
         Node* left = Node::ParseOr(parser);
+        parser->skipNewlines();
         if (parser->isMore())
         {
             Token t = parser->peekToken();
@@ -493,6 +613,7 @@ namespace diannex
     Node* Node::ParseOr(Parser* parser)
     {
         Node* left = Node::ParseAnd(parser);
+        parser->skipNewlines();
         if (parser->isMore())
         {
             Token t = parser->peekToken();
@@ -513,6 +634,7 @@ namespace diannex
     Node* Node::ParseAnd(Parser* parser)
     {
         Node* left = Node::ParseCompare(parser);
+        parser->skipNewlines();
         if (parser->isMore())
         {
             Token t = parser->peekToken();
@@ -533,6 +655,7 @@ namespace diannex
     Node* Node::ParseCompare(Parser* parser)
     {
         Node* left = Node::ParseBitwise(parser);
+        parser->skipNewlines();
         if (parser->isMore())
         {
             Token t = parser->peekToken();
@@ -558,6 +681,7 @@ namespace diannex
     Node* Node::ParseBitwise(Parser* parser)
     {
         Node* left = Node::ParseBitShift(parser);
+        parser->skipNewlines();
         if (parser->isMore())
         {
             Token t = parser->peekToken();
@@ -595,6 +719,7 @@ namespace diannex
     Node* Node::ParseBitShift(Parser* parser)
     {
         Node* left = Node::ParseAddSub(parser);
+        parser->skipNewlines();
         if (parser->isMore())
         {
             Token t = parser->peekToken();
@@ -630,6 +755,7 @@ namespace diannex
     Node* Node::ParseAddSub(Parser* parser)
     {
         Node* left = Node::ParseMulDiv(parser);
+        parser->skipNewlines();
         if (parser->isMore())
         {
             Token t = parser->peekToken();
@@ -665,6 +791,7 @@ namespace diannex
     Node* Node::ParseMulDiv(Parser* parser)
     {
         Node* left = Node::ParseExprLast(parser);
+        parser->skipNewlines();
         if (parser->isMore())
         {
             Token t = parser->peekToken();

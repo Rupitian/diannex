@@ -132,7 +132,7 @@ int main(int argc, char** argv)
 
     for (auto& tokens : context.tokenList)
     {
-        std::cout << "\nTokens from '" << tokens.first << "':" << std::endl;
+        std::cout << std::endl << "Tokens from '" << tokens.first << "':" << std::endl;
         for (auto& token : tokens.second)
         {
             std::cout << token << std::endl;
