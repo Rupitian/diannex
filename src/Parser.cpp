@@ -330,7 +330,7 @@ namespace diannex
             switch (t.type)
             {
             case TokenType::Identifier:
-                if (parser->peekToken().type == TokenType::Colon)
+                if (parser->isNextToken(TokenType::Colon))
                 {
                     parser->advance();
                     // todo parse shorthand char call
@@ -345,7 +345,7 @@ namespace diannex
             case TokenType::MarkedString:
                 parser->advance();
                 parser->skipNewlines();
-                if (parser->peekToken().type == TokenType::Colon)
+                if (parser->isNextToken(TokenType::Colon))
                 {
                     // todo parse shorthand char call
                 }
@@ -376,7 +376,7 @@ namespace diannex
                     res->nodes.push_back(condition);
                     res->nodes.push_back(trueBranch);
 
-                    // Check for false branch
+                    // Parse false branch (if present)
                     parser->skipNewlines();
                     if (parser->isMore())
                     {
@@ -388,18 +388,40 @@ namespace diannex
                     }
                     return res;
                 }
-                case KeywordType::Else:
-                    parser->errors.push_back({ ParseError::ErrorType::UnexpectedToken, t.line, t.column, tokenToString(t) });
-                    parser->synchronize();
-                    break;
                 case KeywordType::While:
-                    break;
+                {
+                    parser->advance();
+                    Node* condition = Node::ParseExpression(parser);
+
+                    // Parse true branch
+                    parser->skipNewlines();
+                    Node* body = Node::ParseSceneStatement(parser, KeywordType::None);
+
+                    Node* res = new Node(NodeType::While);
+                    res->nodes.push_back(condition);
+                    res->nodes.push_back(body);
+
+                    return res;
+                }
                 case KeywordType::For:
                     break;
                 case KeywordType::Do:
                     break;
                 case KeywordType::Repeat:
-                    break;
+                {
+                    parser->advance();
+                    Node* condition = Node::ParseExpression(parser);
+
+                    // Parse true branch
+                    parser->skipNewlines();
+                    Node* body = Node::ParseSceneStatement(parser, KeywordType::None);
+
+                    Node* res = new Node(NodeType::Repeat);
+                    res->nodes.push_back(condition);
+                    res->nodes.push_back(body);
+
+                    return res;
+                }
                 case KeywordType::Switch:
                     break;
                 case KeywordType::Continue:
@@ -407,6 +429,23 @@ namespace diannex
                 case KeywordType::Break:
                     break;
                 case KeywordType::Return:
+                {
+                    parser->advance();
+                    Node* res = new Node(NodeType::Return);
+
+                    // Parse expression to return (if present)
+                    parser->skipNewlines();
+                    if (parser->isMore())
+                    {
+                        if (TokenType tt = parser->peekToken().type; tt != TokenType::MainKeyword && tt != TokenType::Semicolon)
+                            res->nodes.push_back(Node::ParseExpression(parser));
+                    }
+                    
+                    return res;
+                }
+                default:
+                    parser->errors.push_back({ ParseError::ErrorType::UnexpectedToken, t.line, t.column, tokenToString(t) });
+                    parser->synchronize();
                     break;
                 }
                 break;
@@ -459,7 +498,7 @@ namespace diannex
 
             // Array index parse
             parser->skipNewlines();
-            while (parser->isMore() && parser->peekToken().type == TokenType::OpenBrack)
+            while (parser->isMore() && parser->isNextToken(TokenType::OpenBrack))
             {
                 parser->advance();
                 res->nodes.push_back(Node::ParseExpression(parser));
@@ -488,7 +527,7 @@ namespace diannex
             }
             else
             {
-                if (parser->peekToken().type == TokenType::OpenParen)
+                if (parser->isNextToken(TokenType::OpenParen))
                 {
                     // We have to check if this call is a command or not
                     // To do this, we check the balance of parentheses, and after the last one, if there is NOT a comma, it's a function
@@ -506,7 +545,7 @@ namespace diannex
                         curr = parser->peekToken();
                     }
                     parser->skipNewlines();
-                    if (parser->peekToken().type != TokenType::Comma)
+                    if (!parser->isNextToken(TokenType::Comma))
                     {
                         parentheses = true;
                     }
@@ -582,7 +621,7 @@ namespace diannex
 
         // Array index parse
         parser->skipNewlines();
-        while (parser->isMore() && parser->peekToken().type == TokenType::OpenBrack)
+        while (parser->isMore() && parser->isNextToken(TokenType::OpenBrack))
         {
             parser->advance();
             res->nodes.push_back(Node::ParseExpression(parser));

@@ -91,6 +91,14 @@ namespace diannex
             None,
 
             If,
+            While,
+            For,
+            Do,
+            Repeat,
+            Switch,
+            Continue,
+            Break,
+            Return,
 
             ExprConstant,
             ExprNot,
