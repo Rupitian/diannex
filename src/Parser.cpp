@@ -367,11 +367,16 @@ namespace diannex
                 {
                     parser->advance();
                     Node* condition = Node::ParseExpression(parser);
+
+                    // Parse true branch
                     parser->skipNewlines();
                     Node* trueBranch = Node::ParseSceneStatement(parser, KeywordType::None);
+
                     Node* res = new Node(NodeType::If);
                     res->nodes.push_back(condition);
                     res->nodes.push_back(trueBranch);
+
+                    // Check for false branch
                     parser->skipNewlines();
                     if (parser->isMore())
                     {
@@ -452,6 +457,7 @@ namespace diannex
         {
             NodeContent* res = new NodeContent(name.content, NodeType::Variable);
 
+            // Array index parse
             parser->skipNewlines();
             while (parser->isMore() && parser->peekToken().type == TokenType::OpenBrack)
             {
@@ -516,6 +522,7 @@ namespace diannex
 
             if (parentheses)
             {
+                // Parse normal functions with opening/closing parentheses
                 Token t = parser->peekToken();
                 while (parser->isMore() && t.type != TokenType::CloseParen)
                 {
@@ -540,6 +547,7 @@ namespace diannex
             }
             else
             {
+                // Parse command-syntax functions that close on a newline or semicolon
                 Token t = parser->peekToken();
                 while (parser->isMore() && t.type != TokenType::Newline && t.type != TokenType::Semicolon)
                 {
@@ -572,7 +580,7 @@ namespace diannex
         parser->skipNewlines();
         Node* res = Node::ParseConditional(parser);
 
-        // Array parse
+        // Array index parse
         parser->skipNewlines();
         while (parser->isMore() && parser->peekToken().type == TokenType::OpenBrack)
         {
@@ -846,6 +854,8 @@ namespace diannex
             case TokenType::VariableStart:
             {
                 Node* val = Node::ParseVariable(parser);
+
+                // Also check for postfix operations
                 parser->skipNewlines();
                 t = parser->peekToken();
                 if (t.type == TokenType::Increment)
@@ -862,6 +872,7 @@ namespace diannex
                     res->nodes.push_back(val);
                     return res;
                 }
+
                 return val;
             }
             case TokenType::Not:
