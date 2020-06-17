@@ -172,6 +172,21 @@ namespace diannex
     {
     }
 
+    NodeTextRun::NodeTextRun(std::string content, bool excludeTranslation)
+        : NodeContent(content, NodeType::TextRun), excludeTranslation(excludeTranslation)
+    {
+    }
+
+    NodeToken::NodeToken(NodeType type, Token token)
+        : Node(type), token(token)
+    {
+    }
+
+    NodeTokenModifier::NodeTokenModifier(NodeType type, Token token, KeywordType modifier)
+        : Node(type), token(token), modifier(modifier)
+    {
+    }
+
     /*
         Group statements
     */
@@ -313,15 +328,60 @@ namespace diannex
         return res;
     }
 
-    Node* Node::ParseSceneStatement(Parser* parser, KeywordType modifier)
+    Node* Node::ParseSceneStatement(Parser* parser, KeywordType modifier, bool inSwitch)
     {
         Token t = parser->peekToken();
 
         if (t.type == TokenType::VariableStart)
         {
-            parser->advance();
+            Node* variable = Node::ParseVariable(parser);
             parser->skipNewlines();
-            // todo parse variable assign (and other variants like +=), increment, or decrement
+            t = parser->peekToken();
+            switch (t.type)
+            {
+            case TokenType::Increment:
+            {
+                if (modifier != KeywordType::None)
+                    parser->errors.push_back({ ParseError::ErrorType::UnexpectedModifierFor, t.line, t.column, tokenToString(t) });
+                Node* res = new Node(NodeType::Increment);
+                parser->advance();
+                res->nodes.push_back(variable);
+                return res;
+            }
+            case TokenType::Decrement:
+            {
+                if (modifier != KeywordType::None)
+                    parser->errors.push_back({ ParseError::ErrorType::UnexpectedModifierFor, t.line, t.column, tokenToString(t) });
+                Node* res = new Node(NodeType::Decrement);
+                parser->advance();
+                res->nodes.push_back(variable);
+                return res;
+            }
+            case TokenType::PlusEquals:
+            case TokenType::MinusEquals:
+            case TokenType::MultiplyEquals:
+            case TokenType::DivideEquals:
+            case TokenType::ModEquals:
+            case TokenType::BitwiseAndEquals:
+            case TokenType::BitwiseOrEquals:
+            case TokenType::BitwiseXorEquals:
+                if (modifier != KeywordType::None)
+                    parser->errors.push_back({ ParseError::ErrorType::UnexpectedModifierFor, t.line, t.column, tokenToString(t) });
+            case TokenType::Equals:
+            {
+                NodeTokenModifier* res = new NodeTokenModifier(NodeType::Assign, t, modifier);
+                res->nodes.push_back(variable);
+
+                parser->advance();
+                res->nodes.push_back(Node::ParseExpression(parser));
+
+                return res;
+            }
+            default:
+                parser->errors.push_back({ ParseError::ErrorType::UnexpectedToken, t.line, t.column, tokenToString(t) });
+                parser->synchronize();
+                break;
+            }
         }
         else
         {
@@ -330,13 +390,20 @@ namespace diannex
             switch (t.type)
             {
             case TokenType::Identifier:
+                parser->storePosition();
+                parser->advance();
+                parser->skipNewlines();
                 if (parser->isNextToken(TokenType::Colon))
                 {
                     parser->advance();
-                    // todo parse shorthand char call
+                    parser->skipNewlines();
+                    Node* res = new NodeToken(NodeType::ShorthandChar, t);
+                    res->nodes.push_back(Node::ParseSceneStatement(parser, KeywordType::None));
+                    return res;
                 }
                 else
                 {
+                    parser->restorePosition();
                     return Node::ParseFunction(parser, false);
                 }
                 break;
@@ -347,7 +414,11 @@ namespace diannex
                 parser->skipNewlines();
                 if (parser->isNextToken(TokenType::Colon))
                 {
-                    // todo parse shorthand char call
+                    parser->advance();
+                    parser->skipNewlines();
+                    Node* res = new NodeToken(NodeType::ShorthandChar, t);
+                    res->nodes.push_back(Node::ParseSceneStatement(parser, KeywordType::None));
+                    return res;
                 }
                 else
                 {
@@ -366,6 +437,7 @@ namespace diannex
                 case KeywordType::If:
                 {
                     parser->advance();
+                    parser->skipNewlines();
                     Node* condition = Node::ParseExpression(parser);
 
                     // Parse true branch
@@ -391,9 +463,10 @@ namespace diannex
                 case KeywordType::While:
                 {
                     parser->advance();
+                    parser->skipNewlines();
                     Node* condition = Node::ParseExpression(parser);
 
-                    // Parse true branch
+                    // Parse body
                     parser->skipNewlines();
                     Node* body = Node::ParseSceneStatement(parser, KeywordType::None);
 
@@ -404,15 +477,86 @@ namespace diannex
                     return res;
                 }
                 case KeywordType::For:
-                    break;
+                {
+                    parser->advance();
+                    parser->skipNewlines();
+
+                    parser->ensureToken(TokenType::OpenParen);
+                    parser->skipNewlines();
+
+                    // Initialize statement
+                    Node* init = Node::ParseSceneStatement(parser, KeywordType::None);
+                    parser->skipNewlines();
+                    if (init->type != NodeType::None)
+                    {
+                        parser->ensureToken(TokenType::Semicolon);
+                        parser->skipNewlines();
+                    }
+
+                    // Condition
+                    Node* condition;
+                    if (parser->isNextToken(TokenType::Semicolon))
+                    {
+                        condition = new Node(NodeType::None);
+                        parser->advance();
+                    }
+                    else
+                    {
+                        condition = Node::ParseExpression(parser);
+                        parser->skipNewlines();
+                        parser->ensureToken(TokenType::Semicolon);
+                    }
+                    parser->skipNewlines();
+
+                    // Loop statement
+                    Node* loop = Node::ParseSceneStatement(parser, KeywordType::None);
+                    parser->skipNewlines();
+
+                    parser->ensureToken(TokenType::CloseParen);
+
+                    // Loop body
+                    parser->skipNewlines();
+                    Node* body = Node::ParseSceneStatement(parser, KeywordType::None);
+
+                    Node* res = new Node(NodeType::For);
+                    res->nodes.push_back(init);
+                    res->nodes.push_back(condition);
+                    res->nodes.push_back(loop);
+                    res->nodes.push_back(body);
+                    return res;
+                }
                 case KeywordType::Do:
-                    break;
+                {
+                    parser->advance();
+                    parser->skipNewlines();
+
+                    // Parse true branch
+                    parser->skipNewlines();
+                    Node* body = Node::ParseSceneStatement(parser, KeywordType::None);
+
+                    // Parse the "while" keyword
+                    parser->skipNewlines();
+                    Token keyword = parser->ensureToken(TokenType::MainKeyword);
+                    if (keyword.type != TokenType::Error && keyword.keywordType != KeywordType::While)
+                        parser->errors.push_back({ ParseError::ErrorType::ExpectedTokenButGot, t.line, t.column,
+                                                    tokenToString(Token(TokenType::MainKeyword, 0, 0, KeywordType::While)), tokenToString(keyword) });
+
+                    parser->skipNewlines();
+                    Node* condition = Node::ParseExpression(parser);
+
+                    Node* res = new Node(NodeType::Do);
+                    res->nodes.push_back(body);
+                    res->nodes.push_back(condition);
+
+                    return res;
+                }
                 case KeywordType::Repeat:
                 {
                     parser->advance();
+                    parser->skipNewlines();
                     Node* condition = Node::ParseExpression(parser);
 
-                    // Parse true branch
+                    // Parse body
                     parser->skipNewlines();
                     Node* body = Node::ParseSceneStatement(parser, KeywordType::None);
 
@@ -423,11 +567,57 @@ namespace diannex
                     return res;
                 }
                 case KeywordType::Switch:
-                    break;
+                {
+                    parser->advance();
+                    parser->skipNewlines();
+                    Node* value = Node::ParseExpression(parser);
+
+                    Node* res = new Node(NodeType::Switch);
+                    res->nodes.push_back(value);
+
+                    parser->ensureToken(TokenType::OpenCurly); 
+                    parser->skipNewlines();
+                    parser->skipSemicolons();
+                    while (parser->isMore() && !parser->isNextToken(TokenType::CloseCurly))
+                    {
+                        res->nodes.push_back(Node::ParseSceneStatement(parser, KeywordType::None, true));
+                        parser->skipSemicolons();
+                        parser->skipNewlines();
+                    }
+                    parser->ensureToken(TokenType::CloseCurly);
+
+                    return res;
+                }
+                case KeywordType::Case:
+                {
+                    if (!inSwitch)
+                        parser->errors.push_back({ ParseError::ErrorType::UnexpectedSwitchCase, t.line, t.column });
+                    parser->advance();
+                    parser->skipNewlines();
+                    Node* res = new Node(NodeType::SwitchCase);
+                    res->nodes.push_back(Node::ParseExpression(parser));
+                    parser->ensureToken(TokenType::Colon);
+                    return res;
+                }
+                case KeywordType::Default:
+                {
+                    if (!inSwitch)
+                        parser->errors.push_back({ ParseError::ErrorType::UnexpectedSwitchDefault, t.line, t.column });
+                    parser->advance();
+                    parser->skipNewlines();
+                    parser->ensureToken(TokenType::Colon);
+                    return new Node(NodeType::SwitchDefault);
+                }
                 case KeywordType::Continue:
-                    break;
+                {
+                    parser->advance();
+                    return new Node(NodeType::Continue);
+                }
                 case KeywordType::Break:
-                    break;
+                {
+                    parser->advance();
+                    return new Node(NodeType::Break);
+                }
                 case KeywordType::Return:
                 {
                     parser->advance();
@@ -1008,16 +1198,6 @@ namespace diannex
 
         parser->errors.push_back({ ParseError::ErrorType::UnexpectedEOF });
         return nullptr;
-    }
-
-    NodeTextRun::NodeTextRun(std::string content, bool excludeTranslation) 
-        : NodeContent(content, NodeType::TextRun), excludeTranslation(excludeTranslation)
-    {
-    }
-
-    NodeToken::NodeToken(NodeType type, Token token) 
-        : Node(type), token(token)
-    {
     }
 
     /*

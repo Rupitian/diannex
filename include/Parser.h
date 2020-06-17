@@ -16,7 +16,9 @@ namespace diannex
             UnexpectedToken,
             UnexpectedModifierFor,
             UnexpectedMarkedString,
-            UnexpectedEOF
+            UnexpectedEOF,
+            UnexpectedSwitchCase,
+            UnexpectedSwitchDefault
         };
 
         ErrorType type;
@@ -87,7 +89,11 @@ namespace diannex
             Variable,
             Increment,
             Decrement,
+            Assign,
             SceneFunction,
+            ShorthandChar,
+            SwitchCase,
+            SwitchDefault,
             None,
 
             If,
@@ -125,7 +131,7 @@ namespace diannex
         
         static Node* ParseSceneBlock(Parser* parser);
         static Node* ParseSceneBlock(Parser* parser, std::string name);
-        static Node* ParseSceneStatement(Parser* parser, KeywordType modifier);
+        static Node* ParseSceneStatement(Parser* parser, KeywordType modifier, bool inSwitch = false);
         static Node* ParseVariable(Parser* parser);
         static Node* ParseFunction(Parser* parser, bool parentheses = true);
 
@@ -175,6 +181,15 @@ namespace diannex
         NodeToken(NodeType type, Token token);
 
         Token token;
+    };
+
+    class NodeTokenModifier : public Node
+    {
+    public:
+        NodeTokenModifier(NodeType type, Token token, KeywordType modifier);
+
+        Token token;
+        KeywordType modifier;
     };
 
 

@@ -108,6 +108,8 @@ namespace diannex
         Continue,
         Break,
         Return,
+        Case,
+        Default,
 
         // Choice/choose scope
         Require,

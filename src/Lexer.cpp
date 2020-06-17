@@ -752,6 +752,10 @@ namespace diannex
                                 out.emplace_back(TokenType::MainKeyword, line, col, KeywordType::Break);
                             else if (identifier->compare("return") == 0)
                                 out.emplace_back(TokenType::MainKeyword, line, col, KeywordType::Return);
+                            else if (identifier->compare("case") == 0)
+                                out.emplace_back(TokenType::MainKeyword, line, col, KeywordType::Case);
+                            else if (identifier->compare("default") == 0)
+                                out.emplace_back(TokenType::MainKeyword, line, col, KeywordType::Default);
                             else if (identifier->compare("require") == 0)
                                 out.emplace_back(TokenType::MainSubKeyword, line, col, KeywordType::Require);
                             else if (identifier->compare("chance") == 0)
@@ -1010,6 +1014,10 @@ namespace diannex
                 return "'break'";
             case Return:
                 return "'return'";
+            case Case:
+                return "'case'";
+            case Default:
+                return "'default'";
             }
             break;
         case MainSubKeyword:
