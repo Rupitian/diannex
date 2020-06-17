@@ -113,7 +113,6 @@ namespace diannex
 
         // Choice/choose scope
         Require,
-        Chance,
 
         // Modifiers (in either scope)
         Local,

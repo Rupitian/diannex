@@ -431,7 +431,69 @@ namespace diannex
                 switch (t.keywordType)
                 {
                 case KeywordType::Choice:
-                    break;
+                {
+                    parser->advance();
+                    parser->skipNewlines();
+
+                    Node* res = new Node(NodeType::Choice);
+
+                    parser->ensureToken(TokenType::OpenCurly);
+                    parser->skipNewlines();
+                    while (parser->isMore() && !parser->isNextToken(TokenType::CloseCurly))
+                    {
+                        // Parse the choice text
+                        switch (Token val = parser->peekToken(); val.type)
+                        {
+                        case TokenType::String:
+                        case TokenType::MarkedString:
+                        case TokenType::ExcludeString:
+                            res->nodes.push_back(new NodeToken(NodeType::ChoiceText, val));
+                            parser->advance();
+                            break;
+                        default:
+                            res->nodes.push_back(new Node(NodeType::None));
+                            break;
+                        }
+
+                        // Parse the chance
+                        parser->skipNewlines();
+                        switch (Token val = parser->peekToken(); val.type)
+                        {
+                        case TokenType::Number:
+                        case TokenType::Percentage:
+                            res->nodes.push_back(new NodeToken(NodeType::ExprConstant, val));
+                            parser->advance();
+                            break;
+                        case TokenType::OpenParen:
+                            res->nodes.push_back(Node::ParseExpression(parser));
+                            break;
+                        default:
+                            res->nodes.push_back(new NodeToken(NodeType::ExprConstant, Token(TokenType::Number, 0, 0, "1")));
+                            break;
+                        }
+
+                        // Parse the require
+                        parser->skipNewlines();
+                        t = parser->peekToken();
+                        if (t.type == TokenType::MainSubKeyword && t.keywordType == KeywordType::Require)
+                        {
+                            parser->advance();
+                            parser->skipNewlines();
+                            res->nodes.push_back(Node::ParseExpression(parser));
+                        }
+                        else
+                            res->nodes.push_back(new Node(NodeType::None));
+
+                        // Parse the statement
+                        res->nodes.push_back(Node::ParseSceneStatement(parser, KeywordType::None));
+                        parser->skipNewlines();
+                    }
+                    if (res->nodes.size() == 0)
+                        parser->errors.push_back({ ParseError::ErrorType::ChoiceWithoutStatement, t.line, t.column });
+                    parser->ensureToken(TokenType::CloseCurly);
+
+                    return res;
+                }
                 case KeywordType::Choose:
                 {
                     parser->advance();

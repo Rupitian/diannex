@@ -758,8 +758,6 @@ namespace diannex
                                 out.emplace_back(TokenType::MainKeyword, line, col, KeywordType::Default);
                             else if (identifier->compare("require") == 0)
                                 out.emplace_back(TokenType::MainSubKeyword, line, col, KeywordType::Require);
-                            else if (identifier->compare("chance") == 0)
-                                out.emplace_back(TokenType::MainSubKeyword, line, col, KeywordType::Chance);
                             else if (identifier->compare("local") == 0)
                                 out.emplace_back(TokenType::ModifierKeyword, line, col, KeywordType::Local);
                             else if (identifier->compare("global") == 0)
@@ -1025,8 +1023,6 @@ namespace diannex
             {
             case Require:
                 return "'require'";
-            case Chance:
-                return "'chance'";
             }
             break;
         case ModifierKeyword:

@@ -19,7 +19,8 @@ namespace diannex
             UnexpectedEOF,
             UnexpectedSwitchCase,
             UnexpectedSwitchDefault,
-            ChooseWithoutStatement
+            ChooseWithoutStatement,
+            ChoiceWithoutStatement
         };
 
         ErrorType type;
@@ -95,6 +96,7 @@ namespace diannex
             ShorthandChar,
             SwitchCase,
             SwitchDefault,
+            ChoiceText,
             None,
 
             If,
@@ -107,6 +109,7 @@ namespace diannex
             Break,
             Return,
             Choose,
+            Choice,
 
             ExprConstant,
             ExprNot,
