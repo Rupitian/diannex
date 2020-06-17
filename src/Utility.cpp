@@ -408,9 +408,6 @@ std::ostream& operator<<(std::ostream& o, const diannex::Token& t)
             case diannex::Require:
                 o << "Require";
                 break;
-            case diannex::Chance:
-                o << "Chance";
-                break;
             case diannex::Local:
                 o << "Local";
                 break;
