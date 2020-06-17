@@ -46,6 +46,7 @@ namespace diannex
 
         bool isMore();
         void skipNewlines();
+        void skipSemicolons();
         bool isNextToken(TokenType type);
 
         Token peekToken();
@@ -87,6 +88,7 @@ namespace diannex
             Increment,
             Decrement,
             SceneFunction,
+            None,
 
             If,
 

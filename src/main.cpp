@@ -115,6 +115,10 @@ int main(int argc, char** argv)
 
         // TESTING
         ParseResult parsed = Parser::ParseTokens(&tokens);
+        if (parsed.errors.size() != 0)
+        {
+            std::cout << "Parse error" << std::endl;
+        }
 
         context.tokenList.insert(std::make_pair(file, tokens));
     }

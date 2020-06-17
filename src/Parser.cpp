@@ -63,6 +63,22 @@ namespace diannex
             advance();
     }
 
+    void Parser::skipSemicolons()
+    {
+        if (isMore())
+        {
+            if (Token t = peekToken(); t.type == TokenType::Semicolon)
+            {
+                do
+                {
+                    advance();
+                    skipNewlines();
+                } while (isMore() && (t = peekToken()).type == TokenType::Semicolon);
+                skipNewlines();
+            }
+        }
+    }
+
     bool Parser::isNextToken(TokenType type)
     {
         return tokens->at(position).type == type;
@@ -263,26 +279,11 @@ namespace diannex
 
         parser->skipNewlines();
 
-        if (Token t = parser->peekToken(); t.type == TokenType::Semicolon)
-        {
-            do
-            {
-                parser->advance();
-                parser->skipNewlines();
-            } while (parser->isMore() && (t = parser->peekToken()).type == TokenType::Semicolon);
-            parser->skipNewlines();
-        }
+        parser->skipSemicolons();
         while (parser->isMore() && !parser->isNextToken(TokenType::CloseCurly))
         {
             res->nodes.push_back(Node::ParseSceneStatement(parser, KeywordType::None));
-            if (Token t = parser->peekToken(); t.type == TokenType::Semicolon)
-            {
-                do
-                {
-                    parser->advance();
-                    parser->skipNewlines();
-                } while (parser->isMore() && (t = parser->peekToken()).type == TokenType::Semicolon);
-            }
+            parser->skipSemicolons();
             parser->skipNewlines();
         }
 
@@ -299,26 +300,11 @@ namespace diannex
 
         parser->skipNewlines();
 
-        if (Token t = parser->peekToken(); t.type == TokenType::Semicolon)
-        {
-            do
-            {
-                parser->advance();
-                parser->skipNewlines();
-            } while (parser->isMore() && (t = parser->peekToken()).type == TokenType::Semicolon);
-            parser->skipNewlines();
-        }
+        parser->skipSemicolons();
         while (parser->isMore() && !parser->isNextToken(TokenType::CloseCurly))
         {
             res->nodes.push_back(Node::ParseSceneStatement(parser, KeywordType::None));
-            if (Token t = parser->peekToken(); t.type == TokenType::Semicolon)
-            {
-                do
-                {
-                    parser->advance();
-                    parser->skipNewlines();
-                } while (parser->isMore() && (t = parser->peekToken()).type == TokenType::Semicolon);
-            }
+            parser->skipSemicolons();
             parser->skipNewlines();
         }
 
@@ -386,9 +372,20 @@ namespace diannex
                     Node* res = new Node(NodeType::If);
                     res->nodes.push_back(condition);
                     res->nodes.push_back(trueBranch);
+                    parser->skipNewlines();
+                    if (parser->isMore())
+                    {
+                        if (Token t = parser->peekToken(); t.type == TokenType::MainKeyword && t.keywordType == KeywordType::Else)
+                        {
+                            parser->advance();
+                            res->nodes.push_back(Node::ParseSceneStatement(parser, KeywordType::None));
+                        }
+                    }
                     return res;
                 }
                 case KeywordType::Else:
+                    parser->errors.push_back({ ParseError::ErrorType::UnexpectedToken, t.line, t.column, tokenToString(t) });
+                    parser->synchronize();
                     break;
                 case KeywordType::While:
                     break;
@@ -435,6 +432,9 @@ namespace diannex
                 return new NodeContent(t.content, NodeType::MarkedComment);
             case TokenType::OpenCurly:
                 return Node::ParseSceneBlock(parser);
+            case TokenType::Semicolon:
+                parser->advance();
+                return new Node(NodeType::None);
             default:
                 parser->errors.push_back({ ParseError::ErrorType::UnexpectedToken, t.line, t.column, tokenToString(t) });
                 parser->synchronize();
