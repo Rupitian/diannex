@@ -18,7 +18,8 @@ namespace diannex
             UnexpectedMarkedString,
             UnexpectedEOF,
             UnexpectedSwitchCase,
-            UnexpectedSwitchDefault
+            UnexpectedSwitchDefault,
+            ChooseWithoutStatement
         };
 
         ErrorType type;
@@ -105,6 +106,7 @@ namespace diannex
             Continue,
             Break,
             Return,
+            Choose,
 
             ExprConstant,
             ExprNot,
