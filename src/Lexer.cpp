@@ -219,7 +219,7 @@ namespace diannex
         }
     };
 
-    void Lexer::LexString(const std::string& in, LexerContext& ctx, std::vector<Token>& out)
+    void Lexer::LexString(const std::string& in, CompileContext& ctx, std::vector<Token>& out)
     {
         CodeReader cr = CodeReader(in);
 

@@ -44,4 +44,4 @@ namespace diannex
     };
 }
 
-#endif //DIANNEX_PROJECT_H
+#endif // DIANNEX_PROJECT_H

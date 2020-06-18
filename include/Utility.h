@@ -4,6 +4,7 @@
 #include <string>
 
 #include "Project.h"
+#include "Context.h"
 
 namespace diannex
 {
@@ -15,4 +16,4 @@ namespace diannex
 
 std::ostream& operator<<(std::ostream& o, const diannex::Token& t);
 
-#endif
+#endif // DIANNEX_UTILITY_H

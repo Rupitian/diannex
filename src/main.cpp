@@ -4,12 +4,15 @@
 #include <filesystem>
 #include <exception>
 
-#include "libs/cxxopts.hpp"
+#include <libs/cxxopts.hpp>
+#include <libs/rang.hpp>
 
 #include "Lexer.h"
 #include "Parser.h"
+#include "Bytecode.h"
 #include "Project.h"
 #include "Utility.h"
+#include "Context.h"
 
 using namespace diannex;
 namespace fs = std::filesystem;
@@ -75,15 +78,16 @@ int main(int argc, char** argv)
     }
 
     std::cout << "Beginning compilation process..." << std::endl;
-    std::cout << "Currently: lexer testing" << std::endl;
 
     auto start = std::chrono::high_resolution_clock::now();
 
-    LexerContext context;
+    CompileContext context;
     context.project = &project;
     for (auto& file : project.options.files)
         context.queue.push(file);
 
+    // Load all of the files in the queue and lex them into tokens
+    std::cout << "Lexing..." << std::endl;
     while (!context.queue.empty())
     {
         std::string file = (baseDirectory / context.queue.front()).string();
@@ -105,7 +109,7 @@ int main(int argc, char** argv)
         }
         catch (const std::exception& e)
         {
-            std::cout << "Failed to read file '" << file << "': " << e.what() << std::endl;
+            std::cout << rang::fg::red << "Failed to read file '" << file << "': " << e.what() << rang::fg::reset << std::endl;
             fatalError = true;
             continue;
         }
@@ -113,35 +117,100 @@ int main(int argc, char** argv)
         std::vector<Token> tokens;
         Lexer::LexString(buf, context, tokens);
 
-        // TESTING
-        ParseResult parsed = Parser::ParseTokens(&tokens);
-        if (parsed.errors.size() != 0)
-        {
-            std::cout << "Parse error" << std::endl;
-        }
-
         context.tokenList.insert(std::make_pair(file, tokens));
     }
 
     if (fatalError)
     {
-        std::cout << "Not proceeding with compilation due to fatal errors." << std::endl;
+        std::cout << std::endl << rang::fgB::red << "Not proceeding with compilation due to fatal errors." << rang::fg::reset << std::endl;
+        return 1;
+    }
+
+    // Parse each token stream
+    std::cout << "Parsing..." << std::endl;
+    for (auto& kvp : context.tokenList)
+    {
+        ParseResult parsed = Parser::ParseTokens(&kvp.second);
+        if (parsed.errors.size() != 0)
+        {
+            if (!fatalError)
+            {
+                std::cout << rang::fgB::red << std::endl << "Encountered errors while parsing:" << rang::fg::reset << std::endl;
+                fatalError = true;
+            }
+
+            std::cout << rang::fg::red;
+
+            for (ParseError& e : parsed.errors)
+            {
+                std::cout << "[" << kvp.first << ":" << e.line << ":" << e.column << "] ";
+                switch (e.type)
+                {
+                case ParseError::ErrorType::ExpectedTokenButGot:
+                    std::cout << "Expected token " << e.info1 << " but got " << e.info2 << "." << std::endl;
+                    break;
+                case ParseError::ErrorType::ExpectedTokenButEOF:
+                    std::cout << "Expected token " << e.info1 << " but reached end of file." << std::endl;
+                    break;
+                case ParseError::ErrorType::UnexpectedToken:
+                    std::cout << "Unexpected token " << e.info1 << "." << std::endl;
+                    break;
+                case ParseError::ErrorType::UnexpectedModifierFor:
+                    std::cout << "Unexpected modifier for " << e.info1 << "." << std::endl;
+                    break;
+                case ParseError::ErrorType::UnexpectedMarkedString:
+                    std::cout << "Unexpected MarkedString token." << std::endl;
+                    break;
+                case ParseError::ErrorType::UnexpectedEOF:
+                    std::cout << "Unexpected end of file." << std::endl;
+                    break;
+                case ParseError::ErrorType::UnexpectedSwitchCase:
+                    std::cout << "Unexpected switch 'case' keyword." << std::endl;
+                    break;
+                case ParseError::ErrorType::UnexpectedSwitchDefault:
+                    std::cout << "Unexpected switch 'default' keyword." << std::endl;
+                    break;
+                case ParseError::ErrorType::ChooseWithoutStatement:
+                    std::cout << "Choose statement without any sub-statements." << std::endl;
+                    break;
+                case ParseError::ErrorType::ChoiceWithoutStatement:
+                    std::cout << "Choice statement without any sub-statements." << std::endl;
+                    break;
+                }
+            }
+
+            std::cout << rang::fg::reset;
+        }
+        else
+        {
+            context.parseList.insert(std::make_pair(kvp.first, parsed));
+        }
+    }
+
+    if (fatalError)
+    {
+        std::cout << std::endl << rang::fgB::red << "Not proceeding with compilation due to fatal errors." << rang::fg::reset << std::endl;
         return 1;
     }
 
     auto stop = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
 
-    std::cout << "Took " << duration.count() << " milliseconds" << std::endl;
+    std::cout << rang::fgB::green;
+    if (project.options.compileFinishMessage.size() != 0)
+        std::cout << project.options.compileFinishMessage << std::endl;
+    else
+        std::cout << "Finished! ";
+    std::cout << "Took " << duration.count() << " milliseconds." << rang::fg::reset << std::endl;
 
-    for (auto& tokens : context.tokenList)
+    /*for (auto& tokens : context.tokenList)
     {
         std::cout << std::endl << "Tokens from '" << tokens.first << "':" << std::endl;
         for (auto& token : tokens.second)
         {
             std::cout << token << std::endl;
         }
-    }
+    }*/
     
     return 0;
 }

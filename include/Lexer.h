@@ -8,6 +8,8 @@
 #include <unordered_map>
 
 #include "Project.h"
+#include "Utility.h"
+#include "Context.h"
 
 namespace diannex
 {
@@ -140,21 +142,13 @@ namespace diannex
 
     const char* tokenToString(Token t);
 
-    struct LexerContext
-    {
-        ProjectFormat* project;
-        std::queue<std::string> queue;
-        std::string currentFile;
-        std::unordered_map<std::string, std::vector<Token>> tokenList;
-    };
-
     class Lexer
     {
     public:
-        static void LexString(const std::string& in, LexerContext& ctx, std::vector<Token>& out);
+        static void LexString(const std::string& in, CompileContext& ctx, std::vector<Token>& out);
     private:
         Lexer();
     };
 }
 
-#endif
+#endif // DIANNEX_LEXER_H
