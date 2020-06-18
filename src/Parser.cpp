@@ -437,6 +437,30 @@ namespace diannex
 
                     Node* res = new Node(NodeType::Choice);
 
+                    // Check for statement/text run
+                    Token next = parser->peekToken();
+                    switch (next.type)
+                    {
+                    case TokenType::String:
+                    case TokenType::ExcludeString:
+                    case TokenType::MarkedString:
+                        if (t.type == TokenType::MarkedString)
+                            parser->errors.push_back({ ParseError::ErrorType::UnexpectedMarkedString, t.line, t.column });
+                        res->nodes.push_back(new NodeTextRun(next.content, next.type == TokenType::ExcludeString));
+                        parser->advance();
+                        parser->skipNewlines();
+                        break;
+                    case TokenType::CompareGT: // >
+                        parser->advance();
+                        parser->skipNewlines();
+                        res->nodes.push_back(Node::ParseSceneStatement(parser, KeywordType::None));
+                        parser->skipNewlines();
+                        break;
+                    default:
+                        res->nodes.push_back(new Node(NodeType::None));
+                        break;
+                    }
+
                     parser->ensureToken(TokenType::OpenCurly);
                     parser->skipNewlines();
                     while (parser->isMore() && !parser->isNextToken(TokenType::CloseCurly))
