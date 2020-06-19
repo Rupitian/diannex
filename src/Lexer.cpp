@@ -27,14 +27,14 @@ namespace diannex
     class CodeReader
     {
     public:
-        CodeReader(const std::string& code)
+        CodeReader(const std::string& code, uint32_t line, uint16_t column)
         {
             this->code = code;
 
             position = 0;
             length = code.length();
-            line = 1;
-            column = 1;
+            this->line = line;
+            this->column = column;
             skip = -1;
             stack = 0;
             directiveFollowup = false;
@@ -219,9 +219,9 @@ namespace diannex
         }
     };
 
-    void Lexer::LexString(const std::string& in, CompileContext& ctx, std::vector<Token>& out)
+    void Lexer::LexString(const std::string& in, CompileContext* ctx, std::vector<Token>& out, uint32_t startLine, uint16_t startColumn)
     {
-        CodeReader cr = CodeReader(in);
+        CodeReader cr = CodeReader(in, startLine, startColumn);
 
         if (cr.matchChars(0xEF, 0xBB, 0xBF))
             cr.advanceChar(3); // UTF-8 BOM
@@ -833,9 +833,9 @@ namespace diannex
                         continue;
                     }
 
-                    fs::path p = fs::absolute(ctx.currentFile).parent_path();
+                    fs::path p = fs::absolute(ctx->currentFile).parent_path();
                     p /= ss.str();
-                    ctx.queue.push(p.string());
+                    ctx->queue.push(p.string());
                 }
                 else if (t.keywordType == KeywordType::IfDef || t.keywordType == KeywordType::IfNDef)
                 {
@@ -854,7 +854,7 @@ namespace diannex
                         continue;
                     }
 
-                    bool skip = ctx.project->options.macros.find(*identifier) == ctx.project->options.macros.end();
+                    bool skip = ctx->project->options.macros.find(*identifier) == ctx->project->options.macros.end();
                     if (invert) skip = !skip;
 
                     if (skip)

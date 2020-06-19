@@ -10,7 +10,7 @@ namespace diannex
     struct ProjectInterpolationFlags
     {
         // Symbol used for interpolation. default: $
-        std::string symbol; // NOTE: Should we limit it to a single character?
+        std::string symbol; // Limited to a single character
     };
 
     struct ProjectOptions

@@ -39,9 +39,11 @@ namespace diannex
     class Parser
     {
     public:
-        static ParseResult ParseTokens(std::vector<Token>* tokens);
+        static ParseResult ParseTokens(CompileContext* ctx, std::vector<Token>* tokens);
+        static ParseResult ParseTokensExpression(CompileContext* ctx, std::vector<Token>* tokens);
+        static std::string ProcessStringInterpolation(Parser* parser, Token& token, const std::string& input, std::vector<class Node*>* nodeList);
 
-        Parser(std::vector<Token>* tokens);
+        Parser(CompileContext* ctx, std::vector<Token>* tokens);
 
         void advance();
         void synchronize();
@@ -60,6 +62,7 @@ namespace diannex
         Token ensureToken(TokenType type, KeywordType keywordType);
 
         std::vector<ParseError> errors;
+        CompileContext* context;
     private:
         Parser();
 

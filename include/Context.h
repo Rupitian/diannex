@@ -14,6 +14,7 @@ namespace diannex
         std::unordered_map<std::string, std::vector<struct Token>> tokenList;
         std::unordered_map<std::string, struct ParseResult> parseList;
         std::unordered_map<std::string, std::vector<struct Instruction>> bytecodeList;
+        std::vector<ParseResult> parseInterpolationList;
     };
 }
 	

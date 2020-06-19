@@ -1,22 +1,112 @@
 #include "Parser.h"
 
+#include <sstream>
+
 namespace diannex
 {
     /*
         Base parser
     */
 
-    ParseResult Parser::ParseTokens(std::vector<Token>* tokens)
+    ParseResult Parser::ParseTokens(CompileContext* ctx, std::vector<Token>* tokens)
     {
-        Parser parser = Parser(tokens);
+        Parser parser = Parser(ctx, tokens);
         parser.skipNewlines();
         std::shared_ptr<Node> block(Node::ParseGroupBlock(&parser, false));
         return { block, parser.errors };
     }
 
-    Parser::Parser(std::vector<Token>* tokens)
+    ParseResult Parser::ParseTokensExpression(CompileContext* ctx, std::vector<Token>* tokens)
     {
-        this->tokens = tokens;
+        Parser parser = Parser(ctx, tokens);
+        parser.skipNewlines();
+        std::shared_ptr<Node> expr(Node::ParseExpression(&parser));
+        return { expr, parser.errors };
+    }
+
+    std::string Parser::ProcessStringInterpolation(Parser* parser, Token& token, const std::string& input, std::vector<class Node*>* nodeList)
+    {
+        std::string interpStr = parser->context->project->options.interpolationFlags.symbol;
+        if (interpStr.empty())
+            return input;
+        char interpChar = interpStr.at(0);
+
+        // Build the new string result as well as parse expressions
+        std::stringstream ss(std::ios_base::app | std::ios_base::out);
+        int pos = 0, len = input.length();
+        int interpCount = 0;
+        int line = token.line, col = token.column + ((token.type == TokenType::String) ? 1 : 2);
+        while (pos < len)
+        {
+            char curr = input.at(pos);
+            if (curr == interpChar && pos + 1 < len && input.at(pos + 1) == '{')
+            {
+                bool parse = false;
+                if (pos != 0)
+                {
+                    if (input.at(pos - 1) != '\\')
+                        parse = true;
+                    else
+                        ss << curr;
+                }
+
+                if (parse || pos == 0)
+                {
+                    // Extract the substring
+                    pos += 2;
+                    col += 2;
+                    int count = 0;
+                    int tempLine = line, tempCol = col;
+                    int startPos = pos;
+                    while (pos < len && input.at(pos) != '}')
+                    {
+                        pos++;
+                        count++;
+                        if (input.at(pos) == '\n')
+                        {
+                            tempLine++;
+                            tempCol = 0;
+                        }
+                        else
+                            tempCol++;
+                    }
+                    std::string exprStr = input.substr(startPos, count);
+
+                    // Parse expression and add to nodes
+                    std::vector<Token> tokens;
+                    Lexer::LexString(exprStr, parser->context, tokens, line, col);
+                    ParseResult parsed = Parser::ParseTokensExpression(parser->context, &tokens);
+                    if (parsed.errors.size() != 0)
+                        parser->errors.insert(parser->errors.end(), parsed.errors.begin(), parsed.errors.end());
+                    nodeList->push_back(parsed.baseNode.get());
+                    parser->context->parseInterpolationList.push_back(parsed); // don't let the base node shared_ptr go out of scope
+
+                    // Also add the proper string representation
+                    ss << interpChar << "{" << interpCount++ << "}";
+                    line = tempLine;
+                    col = tempCol + 1;
+                }
+            }
+            else
+            {
+                if (curr == '\n')
+                {
+                    line++;
+                    col = 0;
+                }
+                else
+                    col++;
+                ss << curr;
+            }
+            pos++;
+        }
+        
+        return ss.str();
+    }
+
+    Parser::Parser(CompileContext* ctx, std::vector<Token>* tokens)
+        : context(ctx), tokens(tokens)
+    {
         tokenCount = tokens->size();
         position = 0;
         storedPosition = 0;
@@ -416,15 +506,18 @@ namespace diannex
                 {
                     parser->advance();
                     parser->skipNewlines();
-                    Node* res = new NodeToken(NodeType::ShorthandChar, t);
+                    NodeToken* res = new NodeToken(NodeType::ShorthandChar, t);
                     res->nodes.push_back(Node::ParseSceneStatement(parser, KeywordType::None));
+                    res->token.content = Parser::ProcessStringInterpolation(parser, t, t.content, &res->nodes);
                     return res;
                 }
                 else
                 {
                     if (t.type == TokenType::MarkedString)
                         parser->errors.push_back({ ParseError::ErrorType::UnexpectedMarkedString, t.line, t.column });
-                    return new NodeTextRun(t.content, t.type == TokenType::ExcludeString);
+                    NodeTextRun* res = new NodeTextRun(t.content, t.type == TokenType::ExcludeString);
+                    res->content = Parser::ProcessStringInterpolation(parser, t, t.content, &res->nodes);
+                    return res;
                 }
                 break;
             case TokenType::MainKeyword:
@@ -1067,17 +1160,23 @@ namespace diannex
 
                 // Check for additional operations with the same precedence
                 parser->skipNewlines();
-                t = parser->peekToken();
-                while (t.type == TokenType::BitwiseOr ||
-                    t.type == TokenType::BitwiseAnd ||
-                    t.type == TokenType::BitwiseXor)
+                if (parser->isMore())
                 {
-                    parser->advance();
+                    t = parser->peekToken();
+                    while (t.type == TokenType::BitwiseOr ||
+                           t.type == TokenType::BitwiseAnd ||
+                           t.type == TokenType::BitwiseXor)
+                    {
+                        parser->advance();
 
-                    Node* next = new NodeToken(NodeType::ExprBinary, t);
-                    next->nodes.push_back(res);
-                    next->nodes.push_back(Node::ParseBitShift(parser));
-                    res = next;
+                        Node* next = new NodeToken(NodeType::ExprBinary, t);
+                        next->nodes.push_back(res);
+                        next->nodes.push_back(Node::ParseBitShift(parser));
+                        res = next;
+
+                        if (!parser->isMore())
+                            break;
+                    }
                 }
 
                 return res;
@@ -1104,16 +1203,22 @@ namespace diannex
 
                 // Check for additional operations with the same precedence
                 parser->skipNewlines();
-                t = parser->peekToken();
-                while (t.type == TokenType::BitwiseLShift ||
-                       t.type == TokenType::BitwiseRShift)
+                if (parser->isMore())
                 {
-                    parser->advance();
+                    t = parser->peekToken();
+                    while (t.type == TokenType::BitwiseLShift ||
+                           t.type == TokenType::BitwiseRShift)
+                    {
+                        parser->advance();
 
-                    Node* next = new NodeToken(NodeType::ExprBinary, t);
-                    next->nodes.push_back(res);
-                    next->nodes.push_back(Node::ParseAddSub(parser));
-                    res = next;
+                        Node* next = new NodeToken(NodeType::ExprBinary, t);
+                        next->nodes.push_back(res);
+                        next->nodes.push_back(Node::ParseAddSub(parser));
+                        res = next;
+
+                        if (!parser->isMore())
+                            break;
+                    }
                 }
 
                 return res;
@@ -1140,16 +1245,22 @@ namespace diannex
 
                 // Check for additional operations with the same precedence
                 parser->skipNewlines();
-                t = parser->peekToken();
-                while (t.type == TokenType::Plus ||
-                    t.type == TokenType::Minus)
+                if (parser->isMore())
                 {
-                    parser->advance();
+                    t = parser->peekToken();
+                    while (t.type == TokenType::Plus ||
+                           t.type == TokenType::Minus)
+                    {
+                        parser->advance();
 
-                    Node* next = new NodeToken(NodeType::ExprBinary, t);
-                    next->nodes.push_back(res);
-                    next->nodes.push_back(Node::ParseMulDiv(parser));
-                    res = next;
+                        Node* next = new NodeToken(NodeType::ExprBinary, t);
+                        next->nodes.push_back(res);
+                        next->nodes.push_back(Node::ParseMulDiv(parser));
+                        res = next;
+
+                        if (!parser->isMore())
+                            break;
+                    }
                 }
 
                 return res;
@@ -1178,18 +1289,24 @@ namespace diannex
 
                 // Check for additional operations with the same precedence
                 parser->skipNewlines();
-                t = parser->peekToken();
-                while (t.type == TokenType::Multiply ||
-                       t.type == TokenType::Divide ||
-                       t.type == TokenType::Mod ||
-                       t.type == TokenType::Power)
+                if (parser->isMore())
                 {
-                    parser->advance();
+                    t = parser->peekToken();
+                    while (t.type == TokenType::Multiply ||
+                           t.type == TokenType::Divide ||
+                           t.type == TokenType::Mod ||
+                           t.type == TokenType::Power)
+                    {
+                        parser->advance();
 
-                    Node* next = new NodeToken(NodeType::ExprBinary, t);
-                    next->nodes.push_back(res);
-                    next->nodes.push_back(Node::ParseExprLast(parser));
-                    res = next;
+                        Node* next = new NodeToken(NodeType::ExprBinary, t);
+                        next->nodes.push_back(res);
+                        next->nodes.push_back(Node::ParseExprLast(parser));
+                        res = next;
+
+                        if (!parser->isMore())
+                            break;
+                    }
                 }
 
                 return res;
@@ -1220,20 +1337,23 @@ namespace diannex
 
                 // Also check for postfix operations
                 parser->skipNewlines();
-                t = parser->peekToken();
-                if (t.type == TokenType::Increment)
+                if (parser->isMore())
                 {
-                    parser->advance();
-                    Node* res = new Node(NodeType::ExprPostIncrement);
-                    res->nodes.push_back(val);
-                    return res;
-                }
-                else if (t.type == TokenType::Decrement)
-                {
-                    parser->advance();
-                    Node* res = new Node(NodeType::ExprPostDecrement);
-                    res->nodes.push_back(val);
-                    return res;
+                    t = parser->peekToken();
+                    if (t.type == TokenType::Increment)
+                    {
+                        parser->advance();
+                        Node* res = new Node(NodeType::ExprPostIncrement);
+                        res->nodes.push_back(val);
+                        return res;
+                    }
+                    else if (t.type == TokenType::Decrement)
+                    {
+                        parser->advance();
+                        Node* res = new Node(NodeType::ExprPostDecrement);
+                        res->nodes.push_back(val);
+                        return res;
+                    }
                 }
 
                 return val;

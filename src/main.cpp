@@ -115,7 +115,7 @@ int main(int argc, char** argv)
         }
         context.currentFile = file;
         std::vector<Token> tokens;
-        Lexer::LexString(buf, context, tokens);
+        Lexer::LexString(buf, &context, tokens);
 
         context.tokenList.insert(std::make_pair(file, tokens));
     }
@@ -130,7 +130,7 @@ int main(int argc, char** argv)
     std::cout << "Parsing..." << std::endl;
     for (auto& kvp : context.tokenList)
     {
-        ParseResult parsed = Parser::ParseTokens(&kvp.second);
+        ParseResult parsed = Parser::ParseTokens(&context, &kvp.second);
         if (parsed.errors.size() != 0)
         {
             if (!fatalError)

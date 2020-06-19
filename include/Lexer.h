@@ -145,7 +145,7 @@ namespace diannex
     class Lexer
     {
     public:
-        static void LexString(const std::string& in, CompileContext& ctx, std::vector<Token>& out);
+        static void LexString(const std::string& in, CompileContext* ctx, std::vector<Token>& out, uint32_t startLine = 1, uint16_t startColumn = 1);
     private:
         Lexer();
     };
