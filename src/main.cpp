@@ -130,8 +130,8 @@ int main(int argc, char** argv)
     std::cout << "Parsing..." << std::endl;
     for (auto& kvp : context.tokenList)
     {
-        ParseResult parsed = Parser::ParseTokens(&context, &kvp.second);
-        if (parsed.errors.size() != 0)
+        ParseResult* parsed = Parser::ParseTokens(&context, &kvp.second);
+        if (parsed->errors.size() != 0)
         {
             if (!fatalError)
             {
@@ -141,7 +141,7 @@ int main(int argc, char** argv)
 
             std::cout << rang::fg::red;
 
-            for (ParseError& e : parsed.errors)
+            for (ParseError& e : parsed->errors)
             {
                 std::cout << "[" << kvp.first << ":" << e.line << ":" << e.column << "] ";
                 switch (e.type)
@@ -150,7 +150,7 @@ int main(int argc, char** argv)
                     std::cout << "Expected token " << e.info1 << " but got " << e.info2 << "." << std::endl;
                     break;
                 case ParseError::ErrorType::ExpectedTokenButEOF:
-                    std::cout << "Expected token " << e.info1 << " but reached end of file." << std::endl;
+                    std::cout << "Expected token " << e.info1 << " but reached end of code." << std::endl;
                     break;
                 case ParseError::ErrorType::UnexpectedToken:
                     std::cout << "Unexpected token " << e.info1 << "." << std::endl;
@@ -162,7 +162,7 @@ int main(int argc, char** argv)
                     std::cout << "Unexpected MarkedString token." << std::endl;
                     break;
                 case ParseError::ErrorType::UnexpectedEOF:
-                    std::cout << "Unexpected end of file." << std::endl;
+                    std::cout << "Unexpected end of code." << std::endl;
                     break;
                 case ParseError::ErrorType::UnexpectedSwitchCase:
                     std::cout << "Unexpected switch 'case' keyword." << std::endl;

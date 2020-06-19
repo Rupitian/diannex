@@ -8,20 +8,20 @@ namespace diannex
         Base parser
     */
 
-    ParseResult Parser::ParseTokens(CompileContext* ctx, std::vector<Token>* tokens)
+    ParseResult* Parser::ParseTokens(CompileContext* ctx, std::vector<Token>* tokens)
     {
         Parser parser = Parser(ctx, tokens);
         parser.skipNewlines();
-        std::shared_ptr<Node> block(Node::ParseGroupBlock(&parser, false));
-        return { block, parser.errors };
+        return new ParseResult { Node::ParseGroupBlock(&parser, false), parser.errors };
     }
 
-    ParseResult Parser::ParseTokensExpression(CompileContext* ctx, std::vector<Token>* tokens)
+    ParseResult Parser::ParseTokensExpression(CompileContext* ctx, std::vector<Token>* tokens, uint32_t defaultLine, uint16_t defaultColumn)
     {
         Parser parser = Parser(ctx, tokens);
+        parser.defaultLine = defaultLine;
+        parser.defaultColumn = defaultColumn;
         parser.skipNewlines();
-        std::shared_ptr<Node> expr(Node::ParseExpression(&parser));
-        return { expr, parser.errors };
+        return { Node::ParseExpression(&parser), parser.errors };
     }
 
     std::string Parser::ProcessStringInterpolation(Parser* parser, Token& token, const std::string& input, std::vector<class Node*>* nodeList)
@@ -75,11 +75,14 @@ namespace diannex
                     // Parse expression and add to nodes
                     std::vector<Token> tokens;
                     Lexer::LexString(exprStr, parser->context, tokens, line, col);
-                    ParseResult parsed = Parser::ParseTokensExpression(parser->context, &tokens);
+                    ParseResult parsed = Parser::ParseTokensExpression(parser->context, &tokens, line, col);
                     if (parsed.errors.size() != 0)
                         parser->errors.insert(parser->errors.end(), parsed.errors.begin(), parsed.errors.end());
-                    nodeList->push_back(parsed.baseNode.get());
-                    parser->context->parseInterpolationList.push_back(parsed); // don't let the base node shared_ptr go out of scope
+                    else
+                    {
+                        nodeList->push_back(parsed.baseNode);
+                        parsed.doDelete = false;
+                    }
 
                     // Also add the proper string representation
                     ss << interpChar << "{" << interpCount++ << "}";
@@ -188,7 +191,7 @@ namespace diannex
     {
         if (position == tokenCount)
         {
-            errors.push_back({ ParseError::ErrorType::ExpectedTokenButEOF, 0, 0, tokenToString(Token(type, 0, 0)) });
+            errors.push_back({ ParseError::ErrorType::ExpectedTokenButEOF, defaultLine, defaultColumn, tokenToString(Token(type, 0, 0)) });
             return Token(TokenType::Error, 0, 0);
         }
 
@@ -207,7 +210,7 @@ namespace diannex
     {
         if (position == tokenCount)
         {
-            errors.push_back({ ParseError::ErrorType::ExpectedTokenButEOF, 0, 0, tokenToString(Token(type, 0, 0)) });
+            errors.push_back({ ParseError::ErrorType::ExpectedTokenButEOF, defaultLine, defaultColumn, tokenToString(Token(type, 0, 0)) });
             return Token(TokenType::Error, 0, 0);
         }
 
@@ -226,7 +229,7 @@ namespace diannex
     {
         if (position == tokenCount)
         {
-            errors.push_back({ ParseError::ErrorType::ExpectedTokenButEOF, 0, 0, tokenToString(Token(type, 0, 0, keywordType)) });
+            errors.push_back({ ParseError::ErrorType::ExpectedTokenButEOF, defaultLine, defaultColumn, tokenToString(Token(type, 0, 0, keywordType)) });
             return Token(TokenType::Error, 0, 0);
         }
 
@@ -537,12 +540,16 @@ namespace diannex
                     case TokenType::String:
                     case TokenType::ExcludeString:
                     case TokenType::MarkedString:
+                    {
                         if (t.type == TokenType::MarkedString)
                             parser->errors.push_back({ ParseError::ErrorType::UnexpectedMarkedString, t.line, t.column });
-                        res->nodes.push_back(new NodeTextRun(next.content, next.type == TokenType::ExcludeString));
+                        NodeTextRun* text = new NodeTextRun(next.content, next.type == TokenType::ExcludeString);
+                        text->content = Parser::ProcessStringInterpolation(parser, t, t.content, &text->nodes);
+                        res->nodes.push_back(text);
                         parser->advance();
                         parser->skipNewlines();
                         break;
+                    }
                     case TokenType::CompareGT: // >
                         parser->advance();
                         parser->skipNewlines();
@@ -564,9 +571,13 @@ namespace diannex
                         case TokenType::String:
                         case TokenType::MarkedString:
                         case TokenType::ExcludeString:
-                            res->nodes.push_back(new NodeToken(NodeType::ChoiceText, val));
+                        {
+                            NodeToken* text = new NodeToken(NodeType::ChoiceText, val);
+                            text->token.content = Parser::ProcessStringInterpolation(parser, val, val.content, &text->nodes);
+                            res->nodes.push_back(text);
                             parser->advance();
                             break;
+                        }
                         default:
                             res->nodes.push_back(new Node(NodeType::None));
                             break;
@@ -1325,12 +1336,18 @@ namespace diannex
             switch (t.type)
             {
             case TokenType::Number:
-            case TokenType::String:
-            case TokenType::MarkedString:
-            case TokenType::ExcludeString:
             case TokenType::Percentage:
                 parser->advance();
                 return new NodeToken(NodeType::ExprConstant, t);
+            case TokenType::String:
+            case TokenType::MarkedString:
+            case TokenType::ExcludeString:
+            {
+                parser->advance();
+                NodeToken* str = new NodeToken(NodeType::ExprConstant, t);
+                str->token.content = Parser::ProcessStringInterpolation(parser, t, t.content, &str->nodes);
+                return str;
+            }
             case TokenType::VariableStart:
             {
                 Node* val = Node::ParseVariable(parser);
@@ -1450,7 +1467,7 @@ namespace diannex
             return nullptr;
         }
 
-        parser->errors.push_back({ ParseError::ErrorType::UnexpectedEOF });
+        parser->errors.push_back({ ParseError::ErrorType::UnexpectedEOF, parser->defaultLine, parser->defaultColumn });
         return nullptr;
     }
 

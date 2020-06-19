@@ -32,15 +32,24 @@ namespace diannex
 
     struct ParseResult
     {
-        std::shared_ptr<class Node> baseNode;
+        class Node* baseNode;
         std::vector<ParseError> errors;
+        bool doDelete = true;
+
+        ~ParseResult()
+        {
+            if (doDelete)
+                delete baseNode;
+        }
+
+        ParseResult(const ParseResult&) = delete;
     };
 
     class Parser
     {
     public:
-        static ParseResult ParseTokens(CompileContext* ctx, std::vector<Token>* tokens);
-        static ParseResult ParseTokensExpression(CompileContext* ctx, std::vector<Token>* tokens);
+        static ParseResult* ParseTokens(CompileContext* ctx, std::vector<Token>* tokens);
+        static ParseResult ParseTokensExpression(CompileContext* ctx, std::vector<Token>* tokens, uint32_t defaultLine, uint16_t defaultColumn);
         static std::string ProcessStringInterpolation(Parser* parser, Token& token, const std::string& input, std::vector<class Node*>* nodeList);
 
         Parser(CompileContext* ctx, std::vector<Token>* tokens);
@@ -63,6 +72,8 @@ namespace diannex
 
         std::vector<ParseError> errors;
         CompileContext* context;
+        uint32_t defaultLine = 0;
+        uint16_t defaultColumn = 0;
     private:
         Parser();
 
@@ -159,8 +170,9 @@ namespace diannex
 
         NodeType type;
         std::vector<Node*> nodes;
+
     private:
-        Node(const Node& node) = delete; 
+        Node(const Node&) = delete; 
         Node& operator=(const Node&) = delete;
     };
 
@@ -170,6 +182,8 @@ namespace diannex
         NodeContent(std::string content, NodeType type);
 
         std::string content;
+    private:
+        NodeContent(const NodeContent&) = delete;
     };
 
     /*
@@ -181,6 +195,8 @@ namespace diannex
     public:
         NodeTextRun(std::string content, bool excludeTranslation);
         bool excludeTranslation;
+    private:
+        NodeTextRun(const NodeTextRun&) = delete;
     };
 
     class NodeToken : public Node
@@ -189,6 +205,8 @@ namespace diannex
         NodeToken(NodeType type, Token token);
 
         Token token;
+    private:
+        NodeToken(const NodeToken&) = delete;
     };
 
     class NodeTokenModifier : public Node
@@ -198,6 +216,8 @@ namespace diannex
 
         Token token;
         KeywordType modifier;
+    private:
+        NodeTokenModifier(const NodeTokenModifier&) = delete;
     };
 
 
@@ -213,6 +233,8 @@ namespace diannex
         std::string key;
         std::string value;
         bool excludeValueTranslation;
+    private:
+        NodeDefinition(const NodeDefinition&) = delete;
     };
 }
 
