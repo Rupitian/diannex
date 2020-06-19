@@ -986,10 +986,10 @@ namespace diannex
                 }
             }
 
+            Token t = parser->isMore() ? parser->peekToken() : Token(TokenType::Error, 0, 0);
             if (parentheses)
             {
                 // Parse normal functions with opening/closing parentheses
-                Token t = parser->peekToken();
                 while (parser->isMore() && t.type != TokenType::CloseParen)
                 {
                     res->nodes.push_back(Node::ParseExpression(parser));
@@ -1014,7 +1014,6 @@ namespace diannex
             else
             {
                 // Parse command-syntax functions that close on a newline or semicolon
-                Token t = parser->peekToken();
                 while (parser->isMore() && t.type != TokenType::Newline && t.type != TokenType::Semicolon)
                 {
                     res->nodes.push_back(Node::ParseExpression(parser));
@@ -1506,7 +1505,11 @@ namespace diannex
             {
                 Token val = parser->ensureToken(TokenType::String, TokenType::ExcludeString);
                 if (val.type != TokenType::Error)
-                    return new NodeDefinition(t.content, val.content, val.type != TokenType::String);
+                {
+                    NodeDefinition* def = new NodeDefinition(t.content, val.content, val.type != TokenType::String);
+                    def->value = Parser::ProcessStringInterpolation(parser, val, val.content, &def->nodes);
+                    return def;
+                }
             }
             break;
         case TokenType::MarkedComment:
