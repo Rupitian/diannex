@@ -25,7 +25,11 @@ namespace diannex
         ProjectInterpolationFlags interpolationFlags;
 
         // Directory to output translation files. default: './translations'
+        // If empty, translation files not generated (and are internal)
         std::string translationOutput;
+
+        // Whether to output a private translation file with the public one
+        bool translationPrivate;
 
         // Predefined macros/defines to be used in source files. default: None
         std::unordered_map<std::string, std::string> macros;

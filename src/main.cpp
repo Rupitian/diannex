@@ -193,6 +193,34 @@ int main(int argc, char** argv)
         return 1;
     }
 
+    // Generate bytecode
+    std::cout << "Generating bytecode..." << std::endl;
+    for (auto& kvp : context.parseList)
+    {
+        BytecodeResult* bytecode = Bytecode::Generate(kvp.second, &context);
+        if (bytecode->errors.size() != 0)
+        {
+            if (!fatalError)
+            {
+                std::cout << rang::fgB::red << std::endl << "Encountered errors while generating bytecode:" << rang::fg::reset << std::endl;
+                fatalError = true;
+            }
+
+            std::cout << rang::fg::red;
+
+            for (BytecodeError& e : bytecode->errors)
+            {
+                std::cout << "[" << kvp.first << ":" << e.line << ":" << e.column << "] ";
+
+                // TODO
+            }
+        }
+        else
+        {
+            context.bytecodeList.insert(std::make_pair(kvp.first, bytecode));
+        }
+    }
+
     auto stop = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
 

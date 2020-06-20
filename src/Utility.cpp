@@ -61,6 +61,7 @@ namespace diannex
                                                                  {"symbol", "$"}
                                                          }},
                                  {"translation_output", "./translations"},
+                                 {"translation_private", false},
                                  {"macros", nlohmann::json::array()}
                          }}
         };
@@ -143,6 +144,10 @@ namespace diannex
         proj.options.translationOutput = project["options"].contains("translation_output") ?
                                          project["options"]["translation_output"].get<std::string>() :
                                          "./translations";
+
+        proj.options.translationPrivate = project["options"].contains("translation_private") ?
+                                          project["options"]["translation_private"].get<bool>() :
+                                          false;
 
         if (project["options"].contains("macros"))
         {

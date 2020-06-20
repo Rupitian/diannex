@@ -3,11 +3,19 @@
 
 #include <queue>
 #include <string>
+#include <vector>
 
 #include "Instruction.h"
 
 namespace diannex
 {
+    struct TranslationInfo
+    {
+        std::string key;
+        bool isComment;
+        std::string text;
+    };
+
     struct CompileContext
     {
         ProjectFormat* project;
@@ -15,7 +23,9 @@ namespace diannex
         std::string currentFile;
         std::unordered_map<std::string, std::vector<struct Token>> tokenList;
         std::unordered_map<std::string, struct ParseResult*> parseList;
-        std::unordered_map<std::string, std::vector<Instruction>> bytecodeList;
+        std::unordered_map<std::string, struct BytecodeResult*> bytecodeList;
+        std::vector<std::string> symbolStack;
+        std::vector<TranslationInfo> translationInfo;
 
         ~CompileContext()
         {

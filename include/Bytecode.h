@@ -7,11 +7,28 @@
 
 namespace diannex
 {
+    struct BytecodeError
+    {
+        enum ErrorType
+        {
+        };
 
+        ErrorType type;
+        uint32_t line;
+        uint16_t column;
+    };
+
+    struct BytecodeResult
+    {
+        std::vector<Instruction> instructions;
+        std::vector<BytecodeError> errors;
+    };
+    
     class Bytecode
     {
     public:
-        static void Generate(const ParseResult& in, CompileContext& ctx, std::vector<Instruction>& out);
+        static BytecodeResult* Generate(ParseResult* parsed, CompileContext* ctx);
+        static void GenerateBlock(Node* block, CompileContext* ctx, BytecodeResult* res);
     private:
         Bytecode();
     };
