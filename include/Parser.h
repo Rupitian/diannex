@@ -98,6 +98,7 @@ namespace diannex
             Namespace,
             Scene,
             Definitions,
+            Function,
 
             // Scene-scope
             SceneBlock,
@@ -147,6 +148,8 @@ namespace diannex
 
         static Node* ParseDefinitionBlock(Parser* parser, std::string name);
         static Node* ParseDefinitionStatement(Parser* parser);
+
+        static Node* ParseFunctionBlock(Parser* parser, std::string name, KeywordType modifier);
         
         static Node* ParseSceneBlock(Parser* parser);
         static Node* ParseSceneBlock(Parser* parser, std::string name);
@@ -218,6 +221,18 @@ namespace diannex
         KeywordType modifier;
     private:
         NodeTokenModifier(const NodeTokenModifier&) = delete;
+    };
+
+    class NodeFunc : public Node
+    {
+    public:
+        NodeFunc(std::string name, KeywordType modifier);
+
+        std::string name;
+        KeywordType modifier;
+        std::vector<Token> args;
+    private:
+        NodeFunc(const NodeFunc&) = delete;
     };
 
 

@@ -280,6 +280,11 @@ namespace diannex
     {
     }
 
+    NodeFunc::NodeFunc(std::string name, KeywordType modifier)
+        : Node(NodeType::Function), name(name), modifier(modifier)
+    {
+    }
+
     /*
         Group statements
     */
@@ -343,7 +348,7 @@ namespace diannex
                     }
                     else
                     {
-                        // Parse functions TODO
+                        return Node::ParseFunctionBlock(parser, name.content, modifier);
                     }
                 }
                 else
@@ -378,6 +383,47 @@ namespace diannex
     /*
         Scene/function statements
     */
+
+    Node* Node::ParseFunctionBlock(Parser* parser, std::string name, KeywordType modifier)
+    {
+        NodeFunc* res = new NodeFunc(name, modifier);
+
+        // Parse arguments
+        parser->ensureToken(TokenType::OpenParen);
+
+        parser->skipNewlines();
+        while (parser->isMore() && !parser->isNextToken(TokenType::CloseParen))
+        {
+            res->args.push_back(parser->ensureToken(TokenType::Identifier));
+            parser->skipNewlines();
+            if (parser->isNextToken(TokenType::Comma))
+            {
+                parser->advance();
+                parser->skipNewlines();
+            }
+        }
+
+        parser->ensureToken(TokenType::CloseParen);
+
+        parser->skipNewlines();
+
+        // Parse block
+        parser->ensureToken(TokenType::OpenCurly);
+
+        parser->skipNewlines();
+
+        parser->skipSemicolons();
+        while (parser->isMore() && !parser->isNextToken(TokenType::CloseCurly))
+        {
+            res->nodes.push_back(Node::ParseSceneStatement(parser, KeywordType::None));
+            parser->skipSemicolons();
+            parser->skipNewlines();
+        }
+
+        parser->ensureToken(TokenType::CloseCurly);
+
+        return res;
+    }
 
     Node* Node::ParseSceneBlock(Parser* parser)
     {

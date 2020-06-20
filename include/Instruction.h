@@ -75,6 +75,8 @@ namespace diannex
             choosesel = 0x4C, // Jumps to one of the choices, using the addresses and chances/requirement values on the stack
 
             textrun = 0x4D, // Pauses the interpreter, running a line of text from the stack
+
+            PATCH_CALL = 0xFF, // A call instruction to be patched on serialization to either call or callext
         } opcode;
     };
 }

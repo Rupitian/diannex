@@ -215,10 +215,6 @@ int main(int argc, char** argv)
                 // TODO
             }
         }
-        else
-        {
-            context.bytecodeList.insert(std::make_pair(kvp.first, bytecode));
-        }
     }
 
     auto stop = std::chrono::high_resolution_clock::now();

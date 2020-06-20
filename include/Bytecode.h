@@ -11,16 +11,19 @@ namespace diannex
     {
         enum ErrorType
         {
+            SceneAlreadyExists,
+            FunctionAlreadyExists,
+            DefinitionBlockAlreadyExists,
         };
 
         ErrorType type;
         uint32_t line;
         uint16_t column;
+        const char* info1;
     };
 
     struct BytecodeResult
     {
-        std::vector<Instruction> instructions;
         std::vector<BytecodeError> errors;
     };
     
@@ -29,6 +32,9 @@ namespace diannex
     public:
         static BytecodeResult* Generate(ParseResult* parsed, CompileContext* ctx);
         static void GenerateBlock(Node* block, CompileContext* ctx, BytecodeResult* res);
+        static void GenerateSceneBlock(const std::string& symbol, Node* block, CompileContext* ctx, BytecodeResult* res);
+
+        static void GenerateExpression(Node* expr, CompileContext* ctx, BytecodeResult* res);
     private:
         Bytecode();
     };

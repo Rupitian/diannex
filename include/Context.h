@@ -4,6 +4,7 @@
 #include <queue>
 #include <string>
 #include <vector>
+#include <unordered_set>
 
 #include "Instruction.h"
 
@@ -23,7 +24,10 @@ namespace diannex
         std::string currentFile;
         std::unordered_map<std::string, std::vector<struct Token>> tokenList;
         std::unordered_map<std::string, struct ParseResult*> parseList;
-        std::unordered_map<std::string, struct BytecodeResult*> bytecodeList;
+        std::unordered_map<std::string, std::vector<Instruction>> sceneBytecode;
+        std::unordered_map<std::string, std::vector<Instruction>> functionBytecode;
+        std::unordered_set<std::string> definitions;
+        std::unordered_map<std::string, std::pair<std::string, std::vector<Instruction>>> definitionBytecode;
         std::vector<std::string> symbolStack;
         std::vector<TranslationInfo> translationInfo;
 
