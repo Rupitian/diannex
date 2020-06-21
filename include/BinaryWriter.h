@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string>
+#include <vector>
 
 #ifndef LITTLE_ENDIAN
 #define LITTLE_ENDIAN 0
@@ -31,6 +32,15 @@ namespace diannex
         void WriteDouble(double value);
 
         void WriteString(std::string value);
+
+        template<class T>
+        void WriteList(const std::vector<T>& list)
+        {
+            int size = list.size();
+            WriteUInt32(size);
+            for (int i = 0; i < size; i++)
+                list.at(i).Serialize(this);
+        }
     private:
         virtual int Write(const void* ptr, size_t size) = 0;
     protected:

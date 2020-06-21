@@ -1,6 +1,8 @@
 #ifndef DIANNEX_INSTRUCTION_H
 #define DIANNEX_INSTRUCTION_H
 
+#include "BinaryWriter.h"
+
 namespace diannex
 {
     struct Instruction
@@ -78,6 +80,15 @@ namespace diannex
 
             PATCH_CALL = 0xFF, // A call instruction to be patched on serialization to either call or callext
         } opcode;
+
+        void Serialize(BinaryWriter* bw) const
+        {
+            bw->WriteUInt8(opcode);
+            switch (opcode)
+            {
+                // todo
+            }
+        }
     };
 }
 
