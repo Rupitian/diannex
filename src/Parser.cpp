@@ -270,6 +270,10 @@ namespace diannex
     {
     }
 
+    NodeInt::NodeInt(int value, NodeType type) : Node(type), value(value)
+    {
+    }
+
     NodeToken::NodeToken(NodeType type, Token token)
         : Node(type), token(token)
     {
@@ -1460,10 +1464,11 @@ namespace diannex
             {
                 parser->advance();
                 parser->skipNewlines();
-                Node* res = new Node(NodeType::ExprArray);
+                NodeInt* res = new NodeInt(0, NodeType::ExprArray);
                 t = parser->peekToken();
                 while (parser->isMore() && t.type != TokenType::CloseBrack)
                 {
+                    res->value++;
                     res->nodes.push_back(Node::ParseExpression(parser));
                     parser->skipNewlines();
                     if (parser->isMore())

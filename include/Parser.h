@@ -189,6 +189,16 @@ namespace diannex
         NodeContent(const NodeContent&) = delete;
     };
 
+    class NodeInt : public Node
+    {
+    public:
+        NodeInt(int value, NodeType type);
+
+        int value;
+    private:
+        NodeInt(const NodeInt&) = delete;
+    };
+
     /*
         Scene/function statements
     */

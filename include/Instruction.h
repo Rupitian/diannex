@@ -81,6 +81,29 @@ namespace diannex
             PATCH_CALL = 0xFF, // A call instruction to be patched on serialization to either call or callext
         } opcode;
 
+        union
+        {
+            struct
+            {
+                int32_t arg;
+                int32_t arg2;
+            };
+
+            double_t argDouble;
+        };
+
+        Instruction(Opcode opcode) : opcode(opcode)
+        {
+        }
+
+        Instruction(Opcode opcode, int32_t arg) : opcode(opcode), arg(arg)
+        {
+        }
+
+        Instruction(Opcode opcode, double_t argDouble) : opcode(opcode), argDouble(argDouble)
+        {
+        }
+
         void Serialize(BinaryWriter* bw) const
         {
             bw->WriteUInt8(opcode);

@@ -30,6 +30,17 @@ namespace diannex
             ctx->translationInfo.push_back({ "", false, text });
     }
 
+    static int patchInstruction(Instruction::Opcode opcode, CompileContext* ctx)
+    {
+        ctx->bytecode.emplace_back(opcode);
+        return ctx->bytecode.size() - 1;
+    }
+
+    static void patch(int ind, CompileContext* ctx)
+    {
+        ctx->bytecode.at(ind).arg = ctx->bytecode.size() - ind;
+    }
+
     BytecodeResult* Bytecode::Generate(ParseResult* parsed, CompileContext* ctx)
     {
         BytecodeResult* res = new BytecodeResult;
@@ -57,7 +68,9 @@ namespace diannex
                 const std::string& symbol = expandSymbol(ctx);
                 if (ctx->sceneBytecode.count(symbol))
                     res->errors.push_back({ BytecodeError::ErrorType::SceneAlreadyExists, 0, 0, symbol.c_str() });
-                GenerateSceneBlock(symbol, n, ctx, res);
+                int pos = ctx->bytecode.size();
+                GenerateSceneBlock(n, ctx, res);
+                ctx->sceneBytecode.insert(std::make_pair(symbol, (pos == ctx->bytecode.size()) ? -1 : pos));
                 ctx->symbolStack.pop_back();
                 break;
             }
@@ -88,14 +101,29 @@ namespace diannex
                     }
                     else
                     {
+                        int pos = ctx->bytecode.size();
                         NodeDefinition* def = (NodeDefinition*)subNode;
-                        std::vector<Instruction> instructions;
                         for (auto it = def->nodes.rbegin(); it != def->nodes.rend(); ++it)
                         {
                             GenerateExpression(*it, ctx, res);
                         }
-                        ctx->definitionBytecode.insert(std::make_pair(symbol + def->key, std::make_pair(def->value, instructions)));
-                        translationInfo(ctx, def->value);
+                        bool hasExpr;
+                        if (pos != ctx->bytecode.size())
+                        {
+                            ctx->bytecode.emplace_back(Instruction::Opcode::exit);
+                            hasExpr = true;
+                        }
+                        else
+                            hasExpr = false;
+                        if (def->excludeValueTranslation)
+                        {
+                            ctx->definitionBytecode.insert(std::make_pair(symbol + def->key, std::make_pair(def->value, hasExpr ? pos : -1)));
+                        }
+                        else
+                        {
+                            ctx->definitionBytecode.insert(std::make_pair(symbol + def->key, std::make_pair(std::nullopt, hasExpr ? pos : -1)));
+                            translationInfo(ctx, def->value);
+                        }
                     }
                 }
 
@@ -106,13 +134,108 @@ namespace diannex
         }
     }
 
-    void Bytecode::GenerateSceneBlock(const std::string& symbol, Node* block, CompileContext* ctx, BytecodeResult* res)
+    void Bytecode::GenerateSceneBlock(Node* block, CompileContext* ctx, BytecodeResult* res)
     {
-        // TODO
+        for (Node* n : block->nodes)
+        {
+            switch (n->type)
+            {
+            case Node::NodeType::SceneBlock:
+                GenerateSceneBlock(n, ctx, res);
+                break;
+            }
+        }
     }
 
     void Bytecode::GenerateExpression(Node* expr, CompileContext* ctx, BytecodeResult* res)
     {
-        // TODO
+        int i = 0; // Index within subnodes, which needs to be tracked for the end
+
+        switch (expr->type)
+        {
+        case Node::NodeType::ExprTernary:
+        {
+            GenerateExpression(expr->nodes.at(i++), ctx, res);
+            int patch1 = patchInstruction(Instruction::Opcode::jf, ctx);
+            GenerateExpression(expr->nodes.at(i++), ctx, res);
+            int patch2 = patchInstruction(Instruction::Opcode::j, ctx);
+            patch(patch1, ctx);
+            GenerateExpression(expr->nodes.at(i++), ctx, res);
+            patch(patch2, ctx);
+            break;
+        }
+        case Node::NodeType::ExprBinary:
+        {
+            break;
+        }
+        case Node::NodeType::ExprConstant:
+        {
+            NodeToken* constant = (NodeToken*)expr;
+            switch (constant->token.type)
+            {
+            case TokenType::Number:
+                if (constant->token.content.find('.') == std::string::npos)
+                    ctx->bytecode.emplace_back(Instruction::Opcode::pushi, std::stoi(constant->token.content));
+                else
+                    ctx->bytecode.emplace_back(Instruction::Opcode::pushd, std::stod(constant->token.content));
+                break;
+            case TokenType::Percentage:
+                if (constant->token.content.find('.') == std::string::npos)
+                    ctx->bytecode.emplace_back(Instruction::Opcode::pushd, std::stoi(constant->token.content) / 100.0);
+                else
+                    ctx->bytecode.emplace_back(Instruction::Opcode::pushd, std::stod(constant->token.content) / 100.0);
+                break;
+            }
+            break;
+        }
+        case Node::NodeType::ExprNot:
+        {
+            GenerateExpression(expr->nodes.at(i++), ctx, res);
+            ctx->bytecode.emplace_back(Instruction::Opcode::inv);
+            break;
+        }
+        case Node::NodeType::ExprNegate:
+        {
+            GenerateExpression(expr->nodes.at(i++), ctx, res);
+            ctx->bytecode.emplace_back(Instruction::Opcode::neg);
+            break;
+        }
+        case Node::NodeType::ExprBitwiseNegate:
+        {
+            GenerateExpression(expr->nodes.at(i++), ctx, res);
+            ctx->bytecode.emplace_back(Instruction::Opcode::bitneg);
+            break;
+        }
+        case Node::NodeType::ExprArray:
+        {
+            NodeInt* arr = (NodeInt*)expr;
+            for (int j = 0; j < arr->value; j++)
+                GenerateExpression(arr->nodes.at(i++), ctx, res);
+            ctx->bytecode.emplace_back(Instruction::Opcode::makearr, arr->value);
+            break;
+        }
+        case Node::NodeType::ExprPreIncrement:
+        {
+            break;
+        }
+        case Node::NodeType::ExprPostIncrement:
+        {
+            break;
+        }
+        case Node::NodeType::ExprPreDecrement:
+        {
+            break;
+        }
+        case Node::NodeType::ExprPostDecrement:
+        {
+            break;
+        }
+        case Node::NodeType::SceneFunction:
+        {
+            break;
+        }
+        }
+
+        // TODO array accesses here
     }
 }
