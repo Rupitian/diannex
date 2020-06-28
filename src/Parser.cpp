@@ -270,10 +270,6 @@ namespace diannex
     {
     }
 
-    NodeInt::NodeInt(int value, NodeType type) : Node(type), value(value)
-    {
-    }
-
     NodeToken::NodeToken(NodeType type, Token token)
         : Node(type), token(token)
     {
@@ -1097,13 +1093,21 @@ namespace diannex
 
         // Array index parse
         parser->skipNewlines();
-        while (parser->isMore() && parser->isNextToken(TokenType::OpenBrack))
+        if (parser->isMore() && parser->isNextToken(TokenType::OpenBrack))
         {
-            parser->advance();
-            res->nodes.push_back(Node::ParseExpression(parser));
-            parser->skipNewlines();
-            parser->ensureToken(TokenType::CloseBrack);
-            parser->skipNewlines();
+            Node* arrayRes = new Node(NodeType::ExprAccessArray);
+            arrayRes->nodes.push_back(res);
+
+            do 
+            {
+                parser->advance();
+                arrayRes->nodes.push_back(Node::ParseExpression(parser));
+                parser->skipNewlines();
+                parser->ensureToken(TokenType::CloseBrack);
+                parser->skipNewlines();
+            } while (parser->isMore() && parser->isNextToken(TokenType::OpenBrack));
+
+            return arrayRes;
         }
 
         return res;
@@ -1464,11 +1468,10 @@ namespace diannex
             {
                 parser->advance();
                 parser->skipNewlines();
-                NodeInt* res = new NodeInt(0, NodeType::ExprArray);
+                Node* res = new Node(NodeType::ExprArray);
                 t = parser->peekToken();
                 while (parser->isMore() && t.type != TokenType::CloseBrack)
                 {
-                    res->value++;
                     res->nodes.push_back(Node::ParseExpression(parser));
                     parser->skipNewlines();
                     if (parser->isMore())

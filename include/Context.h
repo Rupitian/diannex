@@ -30,6 +30,8 @@ namespace diannex
         std::unordered_set<std::string> definitions;
         std::unordered_map<std::string, std::pair<std::optional<std::string>, int>> definitionBytecode;
         std::vector<Instruction> bytecode;
+        std::vector<std::string> internalStrings;
+        std::vector<std::string> symbolStrings;
         std::vector<std::string> symbolStack;
         std::vector<TranslationInfo> translationInfo;
 

@@ -137,6 +137,7 @@ namespace diannex
             ExprPostIncrement,
             ExprPreDecrement,
             ExprPostDecrement,
+            ExprAccessArray,
 
             // Definitions-scope
             Definition
@@ -187,16 +188,6 @@ namespace diannex
         std::string content;
     private:
         NodeContent(const NodeContent&) = delete;
-    };
-
-    class NodeInt : public Node
-    {
-    public:
-        NodeInt(int value, NodeType type);
-
-        int value;
-    private:
-        NodeInt(const NodeInt&) = delete;
     };
 
     /*

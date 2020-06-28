@@ -41,6 +41,14 @@ namespace diannex
         ctx->bytecode.at(ind).arg = ctx->bytecode.size() - ind;
     }
 
+    static int string(std::string str, CompileContext* ctx)
+    {
+        int res = std::find(ctx->internalStrings.begin(), ctx->internalStrings.end(), str) - ctx->internalStrings.begin();
+        if (res == ctx->internalStrings.size())
+            ctx->internalStrings.push_back(str);
+        return res;
+    }
+
     BytecodeResult* Bytecode::Generate(ParseResult* parsed, CompileContext* ctx)
     {
         BytecodeResult* res = new BytecodeResult;
@@ -104,9 +112,7 @@ namespace diannex
                         int pos = ctx->bytecode.size();
                         NodeDefinition* def = (NodeDefinition*)subNode;
                         for (auto it = def->nodes.rbegin(); it != def->nodes.rend(); ++it)
-                        {
                             GenerateExpression(*it, ctx, res);
-                        }
                         bool hasExpr;
                         if (pos != ctx->bytecode.size())
                         {
@@ -117,11 +123,11 @@ namespace diannex
                             hasExpr = false;
                         if (def->excludeValueTranslation)
                         {
-                            ctx->definitionBytecode.insert(std::make_pair(symbol + def->key, std::make_pair(def->value, hasExpr ? pos : -1)));
+                            ctx->definitionBytecode.insert(std::make_pair(symbol + '.' + def->key, std::make_pair(def->value, hasExpr ? pos : -1)));
                         }
                         else
                         {
-                            ctx->definitionBytecode.insert(std::make_pair(symbol + def->key, std::make_pair(std::nullopt, hasExpr ? pos : -1)));
+                            ctx->definitionBytecode.insert(std::make_pair(symbol + '.' + def->key, std::make_pair(std::nullopt, hasExpr ? pos : -1)));
                             translationInfo(ctx, def->value);
                         }
                     }
@@ -175,15 +181,40 @@ namespace diannex
             {
             case TokenType::Number:
                 if (constant->token.content.find('.') == std::string::npos)
-                    ctx->bytecode.emplace_back(Instruction::Opcode::pushi, std::stoi(constant->token.content));
+                    ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushi, std::stoi(constant->token.content)));
                 else
-                    ctx->bytecode.emplace_back(Instruction::Opcode::pushd, std::stod(constant->token.content));
+                    ctx->bytecode.push_back(Instruction::make_double(Instruction::Opcode::pushd, std::stod(constant->token.content)));
                 break;
             case TokenType::Percentage:
                 if (constant->token.content.find('.') == std::string::npos)
-                    ctx->bytecode.emplace_back(Instruction::Opcode::pushd, std::stoi(constant->token.content) / 100.0);
+                    ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushd, std::stoi(constant->token.content) / 100.0));
                 else
-                    ctx->bytecode.emplace_back(Instruction::Opcode::pushd, std::stod(constant->token.content) / 100.0);
+                    ctx->bytecode.push_back(Instruction::make_double(Instruction::Opcode::pushd, std::stod(constant->token.content) / 100.0));
+                break;
+            case TokenType::String: // todo: add default setting to project file?
+            case TokenType::ExcludeString:
+                if (constant->nodes.size() == 0)
+                    ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushbs, string(constant->token.content, ctx)));
+                else
+                {
+                    for (auto it = constant->nodes.rbegin(); it != constant->nodes.rend(); ++it)
+                        GenerateExpression(*it, ctx, res);
+                    ctx->bytecode.push_back(Instruction::make_int2(Instruction::Opcode::pushbints, string(constant->token.content, ctx), constant->nodes.size()));
+                }
+                break;
+            case TokenType::MarkedString:
+                if (constant->nodes.size() == 0)
+                {
+                    ctx->bytecode.emplace_back(Instruction::Opcode::pushs);
+                    translationInfo(ctx, constant->token.content);
+                }
+                else
+                {
+                    for (auto it = constant->nodes.rbegin(); it != constant->nodes.rend(); ++it)
+                        GenerateExpression(*it, ctx, res);
+                    ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushbints, constant->nodes.size()));
+                    translationInfo(ctx, constant->token.content);
+                }
                 break;
             }
             break;
@@ -208,10 +239,9 @@ namespace diannex
         }
         case Node::NodeType::ExprArray:
         {
-            NodeInt* arr = (NodeInt*)expr;
-            for (int j = 0; j < arr->value; j++)
-                GenerateExpression(arr->nodes.at(i++), ctx, res);
-            ctx->bytecode.emplace_back(Instruction::Opcode::makearr, arr->value);
+            for (int j = 0; j < expr->nodes.size(); j++)
+                GenerateExpression(expr->nodes.at(i++), ctx, res);
+            ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::makearr, expr->nodes.size()));
             break;
         }
         case Node::NodeType::ExprPreIncrement:
@@ -227,6 +257,10 @@ namespace diannex
             break;
         }
         case Node::NodeType::ExprPostDecrement:
+        {
+            break;
+        }
+        case Node::NodeType::ExprAccessArray:
         {
             break;
         }

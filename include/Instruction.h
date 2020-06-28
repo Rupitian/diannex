@@ -18,10 +18,10 @@ namespace diannex
             pushi = 0x10, // Push 32-bit int: [int value]
             pushd = 0x11, // Push 64-bit floating point: [double value]
 
-            pushs = 0x12, // Push external string: [ID]
-            pushints = 0x13, // Push external interpolated string: [ID]
+            pushs = 0x12, // Push external string
+            pushints = 0x13, // Push external interpolated string: [expr count]
             pushbs = 0x14, // Push internal binary string: [ID]
-            pushbints = 0x15, // Push internal binary interpolated string: [ID]
+            pushbints = 0x15, // Push internal binary interpolated string: [ID, expr count]
 
             makearr = 0x16, // Construct an array based off of stack: [size]
             pusharrind = 0x17, // Extract a single value out of an array, removing it as well (uses stack for index)
@@ -92,16 +92,38 @@ namespace diannex
             double_t argDouble;
         };
 
-        Instruction(Opcode opcode) : opcode(opcode)
+        inline Instruction(Opcode opcode) : opcode(opcode)
         {
         }
 
-        Instruction(Opcode opcode, int32_t arg) : opcode(opcode), arg(arg)
+        inline Instruction(Opcode opcode, int32_t arg, int32_t arg2) : opcode(opcode), arg(arg), arg2(arg2)
         {
         }
 
-        Instruction(Opcode opcode, double_t argDouble) : opcode(opcode), argDouble(argDouble)
+        inline Instruction(Opcode opcode, double_t argDouble) : opcode(opcode), argDouble(argDouble)
         {
+        }
+
+        static inline Instruction make_int(Opcode opcode, int32_t arg)
+        {
+            Instruction res = Instruction(opcode);
+            res.arg = arg;
+            return res;
+        }
+
+        static inline Instruction make_int2(Opcode opcode, int32_t arg, int32_t arg2)
+        {
+            Instruction res = Instruction(opcode);
+            res.arg = arg;
+            res.arg2 = arg2;
+            return res;
+        }
+
+        static inline Instruction make_double(Opcode opcode, double_t arg)
+        {
+            Instruction res = Instruction(opcode);
+            res.argDouble = arg;
+            return res;
         }
 
         void Serialize(BinaryWriter* bw) const
