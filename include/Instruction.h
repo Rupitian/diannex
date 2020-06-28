@@ -96,14 +96,6 @@ namespace diannex
         {
         }
 
-        inline Instruction(Opcode opcode, int32_t arg, int32_t arg2) : opcode(opcode), arg(arg), arg2(arg2)
-        {
-        }
-
-        inline Instruction(Opcode opcode, double_t argDouble) : opcode(opcode), argDouble(argDouble)
-        {
-        }
-
         static inline Instruction make_int(Opcode opcode, int32_t arg)
         {
             Instruction res = Instruction(opcode);
