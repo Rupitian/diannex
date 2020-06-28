@@ -28,25 +28,17 @@ namespace diannex
     {
     public:
         CodeReader(const std::string& code, uint32_t line, uint16_t column)
+            : code(code), position(0), length(code.length()), line(line), column(column)
         {
-            this->code = code;
-
-            position = 0;
-            length = code.length();
-            this->line = line;
-            this->column = column;
-            skip = -1;
-            stack = 0;
-            directiveFollowup = false;
         }
 
         uint32_t position;
         uint32_t length;
         uint32_t line;
         uint16_t column;
-        int16_t skip;
-        int16_t stack;
-        bool directiveFollowup;
+        int16_t skip = -1;
+        int16_t stack = 0;
+        bool directiveFollowup = false;
 
         char peekChar()
         {
