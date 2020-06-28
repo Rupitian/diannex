@@ -212,7 +212,7 @@ namespace diannex
                 {
                     for (auto it = constant->nodes.rbegin(); it != constant->nodes.rend(); ++it)
                         GenerateExpression(*it, ctx, res);
-                    ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushbints, constant->nodes.size()));
+                    ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushints, constant->nodes.size()));
                     translationInfo(ctx, constant->token.content);
                 }
                 break;
