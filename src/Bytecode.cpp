@@ -142,36 +142,205 @@ namespace diannex
 
     void Bytecode::GenerateSceneBlock(Node* block, CompileContext* ctx, BytecodeResult* res)
     {
+        // Make new local context
+        ctx->localCountStack.push_back(0);
+
         for (Node* n : block->nodes)
         {
-            switch (n->type)
-            {
-            case Node::NodeType::SceneBlock:
-                GenerateSceneBlock(n, ctx, res);
-                break;
-            }
+            GenerateSceneStatement(n, ctx, res);
+        }
+
+        // Remove local context, delete locals involved
+        int c = ctx->localCountStack.back();
+        ctx->localCountStack.pop_back();
+        for (int i = 0; i < c; i++)
+            ctx->localStack.pop_back();
+    }
+
+    void Bytecode::GenerateSceneStatement(Node* statement, CompileContext* ctx, BytecodeResult* res)
+    {
+        switch (statement->type)
+        {
+        case Node::NodeType::SceneBlock:
+            GenerateSceneBlock(statement, ctx, res);
+            break;
+        case Node::NodeType::Increment:
+            // todo
+            break;
+        case Node::NodeType::Decrement:
+            // todo
+            break;
+        case Node::NodeType::Assign:
+            // TODO !!
+            break;
+        case Node::NodeType::ShorthandChar:
+            // todo
+            break;
+        case Node::NodeType::SceneFunction:
+        {
+            for (auto it = statement->nodes.rbegin(); it != statement->nodes.rend(); ++it)
+                GenerateExpression(*it, ctx, res);
+            ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::PATCH_CALL, string(((NodeContent*)statement)->content, ctx)));
+            ctx->bytecode.emplace_back(Instruction::Opcode::pop);
+            break;
+        }
+        case Node::NodeType::TextRun:
+            // todo
+            break;
+        case Node::NodeType::Choice:
+            // todo
+            break;
+        case Node::NodeType::Choose:
+            // todo
+            break;
+        case Node::NodeType::If:
+            // todo
+            break;
+        case Node::NodeType::While:
+            // todo
+            break;
+        case Node::NodeType::For:
+            // todo
+            break;
+        case Node::NodeType::Do:
+            // todo
+            break;
+        case Node::NodeType::Repeat:
+            // todo
+            break;
+        case Node::NodeType::Switch:
+            // todo
+            break;
+        case Node::NodeType::Continue:
+            // todo
+            break;
+        case Node::NodeType::Break:
+            // todo
+            break;
+        case Node::NodeType::Return:
+            // todo
+            break;
+        case Node::NodeType::MarkedComment:
+            // todo
+            break;
         }
     }
 
     void Bytecode::GenerateExpression(Node* expr, CompileContext* ctx, BytecodeResult* res)
     {
-        int i = 0; // Index within subnodes, which needs to be tracked for the end
+        int i = 0; // Index within subnodes
 
         switch (expr->type)
         {
         case Node::NodeType::ExprTernary:
         {
+            // Condition
             GenerateExpression(expr->nodes.at(i++), ctx, res);
             int patch1 = patchInstruction(Instruction::Opcode::jf, ctx);
+
+            // Result 1
             GenerateExpression(expr->nodes.at(i++), ctx, res);
             int patch2 = patchInstruction(Instruction::Opcode::j, ctx);
+
             patch(patch1, ctx);
+
+            // Result 2
             GenerateExpression(expr->nodes.at(i++), ctx, res);
+
             patch(patch2, ctx);
             break;
         }
         case Node::NodeType::ExprBinary:
         {
+            NodeToken* binary = (NodeToken*)expr;
+
+            // Put left value onto stack
+            GenerateExpression(expr->nodes.at(i++), ctx, res);
+
+            bool isAnd = binary->token.type == TokenType::LogicalAnd;
+            if (isAnd || binary->token.type == TokenType::LogicalOr)
+            {
+                // Handle short circuit operators (logical and/or)
+                int jump;
+
+                while (i < expr->nodes.size())
+                {
+                    if (isAnd)
+                        jump = patchInstruction(Instruction::Opcode::jf, ctx);
+                    else
+                        jump = patchInstruction(Instruction::Opcode::jt, ctx);
+                    GenerateExpression(expr->nodes.at(i++), ctx, res);
+                }
+
+                int end = patchInstruction(Instruction::Opcode::j, ctx);
+                patch(jump, ctx);
+                if (isAnd)
+                    ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushi, 0));
+                else
+                    ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushi, 1));
+                patch(end, ctx);
+            }
+            else
+            {
+                // Push right value to stack
+                GenerateExpression(expr->nodes.at(i++), ctx, res);
+
+                // Perform operation
+                switch (binary->token.type)
+                {
+                case TokenType::CompareEQ:
+                    ctx->bytecode.emplace_back(Instruction::Opcode::cmpeq);
+                    break;
+                case TokenType::CompareGT:
+                    ctx->bytecode.emplace_back(Instruction::Opcode::cmpgt);
+                    break;
+                case TokenType::CompareGTE:
+                    ctx->bytecode.emplace_back(Instruction::Opcode::cmpgte);
+                    break;
+                case TokenType::CompareLT:
+                    ctx->bytecode.emplace_back(Instruction::Opcode::cmplt);
+                    break;
+                case TokenType::CompareLTE:
+                    ctx->bytecode.emplace_back(Instruction::Opcode::cmplte);
+                    break;
+                case TokenType::CompareNEQ:
+                    ctx->bytecode.emplace_back(Instruction::Opcode::cmpneq);
+                    break;
+                case TokenType::BitwiseOr:
+                    ctx->bytecode.emplace_back(Instruction::Opcode::bitor);
+                    break;
+                case TokenType::BitwiseAnd:
+                    ctx->bytecode.emplace_back(Instruction::Opcode::bitand);
+                    break;
+                case TokenType::BitwiseXor:
+                    ctx->bytecode.emplace_back(Instruction::Opcode::bitxor);
+                    break;
+                case TokenType::BitwiseLShift:
+                    ctx->bytecode.emplace_back(Instruction::Opcode::bitls);
+                    break;
+                case TokenType::BitwiseRShift:
+                    ctx->bytecode.emplace_back(Instruction::Opcode::bitrs);
+                    break;
+                case TokenType::Plus:
+                    ctx->bytecode.emplace_back(Instruction::Opcode::add);
+                    break;
+                case TokenType::Minus:
+                    ctx->bytecode.emplace_back(Instruction::Opcode::sub);
+                    break;
+                case TokenType::Multiply:
+                    ctx->bytecode.emplace_back(Instruction::Opcode::mul);
+                    break;
+                case TokenType::Divide:
+                    ctx->bytecode.emplace_back(Instruction::Opcode::div);
+                    break;
+                case TokenType::Mod:
+                    ctx->bytecode.emplace_back(Instruction::Opcode::mod);
+                    break;
+                case TokenType::Power:
+                    ctx->bytecode.emplace_back(Instruction::Opcode::pow);
+                    break;
+                }
+            }
             break;
         }
         case Node::NodeType::ExprConstant:
@@ -246,30 +415,36 @@ namespace diannex
         }
         case Node::NodeType::ExprPreIncrement:
         {
+            // todo
             break;
         }
         case Node::NodeType::ExprPostIncrement:
         {
+            // todo
             break;
         }
         case Node::NodeType::ExprPreDecrement:
         {
+            // todo
             break;
         }
         case Node::NodeType::ExprPostDecrement:
         {
+            // todo
             break;
         }
         case Node::NodeType::ExprAccessArray:
         {
+            // todo
             break;
         }
         case Node::NodeType::SceneFunction:
         {
+            for (auto it = expr->nodes.rbegin(); it != expr->nodes.rend(); ++it)
+                GenerateExpression(*it, ctx, res);
+            ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::PATCH_CALL, string(((NodeContent*)expr)->content, ctx)));
             break;
         }
         }
-
-        // TODO array accesses here
     }
 }

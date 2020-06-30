@@ -33,6 +33,8 @@ namespace diannex
         std::vector<std::string> internalStrings;
         std::vector<std::string> symbolStrings;
         std::vector<std::string> symbolStack;
+        std::vector<std::string> localStack;
+        std::vector<int> localCountStack;
         std::vector<TranslationInfo> translationInfo;
 
         ~CompileContext()

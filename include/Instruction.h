@@ -51,6 +51,8 @@ namespace diannex
             bitxor = 0x2B, // ditto, xor
             bitneg = 0x2C, // ditto, negate (~)
 
+            pow = 0x2D, // Power binary operation using top two values of stack
+
             cmpeq = 0x30, // Compares the top two values of stack to check if they are equal, popping them, pushing the result
             cmpgt = 0x31, // ditto, greater than
             cmplt = 0x32, // ditto, less than
@@ -59,7 +61,7 @@ namespace diannex
             cmpneq = 0x35, // ditto, not equal
 
             // Control flow
-            j = 0x40, // Jumps to an instruction [int address]
+            j = 0x40, // Jumps to an instruction [int relative address]
             jt = 0x41, // ditto, but if the value on the top of the stack is truthy (which it pops off)
             jf = 0x42, // ditto, but if the value on the top of the stack is NOT truthy (which it pops off)
             exit = 0x43, // Exits the current stack frame
@@ -78,7 +80,7 @@ namespace diannex
 
             textrun = 0x4D, // Pauses the interpreter, running a line of text from the stack
 
-            PATCH_CALL = 0xFF, // A call instruction to be patched on serialization to either call or callext
+            PATCH_CALL = 0xFF, // A call instruction to be patched on serialization to either call or callext [string function name]
         } opcode;
 
         union

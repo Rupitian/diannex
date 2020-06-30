@@ -473,6 +473,7 @@ namespace diannex
 
         if (t.type == TokenType::VariableStart)
         {
+            // Parse variable assignments/operations
             Node* variable = Node::ParseVariable(parser);
             parser->skipNewlines();
             t = parser->peekToken();
@@ -524,6 +525,7 @@ namespace diannex
         }
         else
         {
+            // Parse everything else
             if (modifier != KeywordType::None)
                 parser->errors.push_back({ ParseError::ErrorType::UnexpectedModifierFor, t.line, t.column, tokenToString(t) });
             switch (t.type)
@@ -1151,6 +1153,13 @@ namespace diannex
                 Node* res = new NodeToken(NodeType::ExprBinary, t);
                 res->nodes.push_back(left);
                 res->nodes.push_back(Node::ParseExpression(parser));
+                parser->skipNewlines();
+                while (parser->isMore() && parser->isNextToken(TokenType::LogicalOr))
+                {
+                    parser->advance();
+                    res->nodes.push_back(Node::ParseExpression(parser));
+                    parser->skipNewlines();
+                }
 
                 return res;
             }
@@ -1172,6 +1181,13 @@ namespace diannex
                 Node* res = new NodeToken(NodeType::ExprBinary, t);
                 res->nodes.push_back(left);
                 res->nodes.push_back(Node::ParseExpression(parser));
+                parser->skipNewlines();
+                while (parser->isMore() && parser->isNextToken(TokenType::LogicalAnd))
+                {
+                    parser->advance();
+                    res->nodes.push_back(Node::ParseExpression(parser));
+                    parser->skipNewlines();
+                }
 
                 return res;
             }
