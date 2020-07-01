@@ -14,6 +14,7 @@ namespace diannex
             SceneAlreadyExists,
             FunctionAlreadyExists,
             DefinitionBlockAlreadyExists,
+            LocalVariableAlreadyExists,
         };
 
         ErrorType type;

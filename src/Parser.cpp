@@ -291,10 +291,14 @@ namespace diannex
 
     Node* Node::ParseGroupBlock(Parser* parser, bool isNamespace)
     {
-        Node* res = new Node(NodeType::Block);
+        Node* res;
 
         if (isNamespace)
+        {
             parser->ensureToken(TokenType::OpenCurly);
+            res = new NodeContent("", NodeType::Block);
+        } else
+            res = new Node(NodeType::Block);
 
         parser->skipNewlines();
 
@@ -314,8 +318,9 @@ namespace diannex
 
     Node* Node::ParseNamespaceBlock(Parser* parser, std::string name)
     {
-        Node* res = Node::ParseGroupBlock(parser, true);
+        NodeContent* res = (NodeContent*)Node::ParseGroupBlock(parser, true);
         res->type = NodeType::Namespace;
+        res->content = name;
         return res;
     }
 
@@ -507,13 +512,15 @@ namespace diannex
             case TokenType::BitwiseXorEquals:
                 if (modifier != KeywordType::None)
                     parser->errors.push_back({ ParseError::ErrorType::UnexpectedModifierFor, t.line, t.column, tokenToString(t) });
+            case TokenType::Semicolon:
             case TokenType::Equals:
             {
                 NodeTokenModifier* res = new NodeTokenModifier(NodeType::Assign, t, modifier);
                 res->nodes.push_back(variable);
 
                 parser->advance();
-                res->nodes.push_back(Node::ParseExpression(parser));
+                if (t.type != TokenType::Semicolon)
+                    res->nodes.push_back(Node::ParseExpression(parser));
 
                 return res;
             }

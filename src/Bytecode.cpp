@@ -154,7 +154,10 @@ namespace diannex
         int c = ctx->localCountStack.back();
         ctx->localCountStack.pop_back();
         for (int i = 0; i < c; i++)
+        {
             ctx->localStack.pop_back();
+            ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::freeloc, ctx->localStack.size()));
+        }
     }
 
     void Bytecode::GenerateSceneStatement(Node* statement, CompileContext* ctx, BytecodeResult* res)
@@ -165,14 +168,137 @@ namespace diannex
             GenerateSceneBlock(statement, ctx, res);
             break;
         case Node::NodeType::Increment:
-            // todo
-            break;
         case Node::NodeType::Decrement:
-            // todo
+        {
+            NodeContent* var = (NodeContent*)(statement->nodes.at(0));
+            auto it = std::find(ctx->localStack.begin(), ctx->localStack.end(), var->content);
+            int localId;
+            if (it == ctx->localStack.end())
+            {
+                localId = -1;
+                ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushvarglb, string(var->content, ctx)));
+            }
+            else
+            {
+                localId = std::distance(ctx->localStack.begin(), it);
+                ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushvarloc, localId));
+            }
+
+            int i = 0;
+            while (i < var->nodes.size())
+            {
+                GenerateExpression(var->nodes.at(i++), ctx, res);
+                ctx->bytecode.emplace_back(Instruction::Opcode::dup2);
+                ctx->bytecode.emplace_back(Instruction::Opcode::pusharrind);
+            }
+
+            ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushi, 1));
+            ctx->bytecode.emplace_back(statement->type == Node::NodeType::Increment ?
+                                        Instruction::Opcode::add :
+                                        Instruction::Opcode::sub);
+
+            for (; i > 0; i--)
+                ctx->bytecode.emplace_back(Instruction::Opcode::setarrind);
+
+            if (localId == -1)
+                ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::setvarglb, string(var->content, ctx)));
+            else
+                ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::setvarloc, localId));
             break;
+        }
         case Node::NodeType::Assign:
-            // TODO !!
+        {
+            NodeTokenModifier* assign = (NodeTokenModifier*)statement;
+
+            NodeContent* var = (NodeContent*)assign->nodes.at(0);
+
+            int localId = -1;
+            if (assign->modifier == KeywordType::Local)
+            {
+                ctx->localCountStack.back()++;
+                if (std::find(ctx->localStack.begin(), ctx->localStack.end(), var->content) != ctx->localStack.end())
+                    res->errors.push_back({ BytecodeError::ErrorType::LocalVariableAlreadyExists, assign->token.line, assign->token.column, var->content.c_str() });
+                localId = ctx->localStack.size();
+                ctx->localStack.push_back(var->content);
+            }
+            else
+            {
+                auto it = std::find(ctx->localStack.begin(), ctx->localStack.end(), var->content);
+                if (it != ctx->localStack.end())
+                    localId = std::distance(ctx->localStack.begin(), it);
+            }
+
+            if (assign->token.type != TokenType::Semicolon)
+            {
+                bool arr = var->nodes.size() != 0;
+                bool notEquals = assign->token.type != TokenType::Equals;
+                if (arr || notEquals)
+                {
+                    if (localId == -1)
+                        ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushvarglb, string(var->content, ctx)));
+                    else
+                        ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushvarloc, localId));
+
+                    // Array accesses
+                    for (int i = 0; i < var->nodes.size(); i++)
+                    {
+                        GenerateExpression(var->nodes.at(i), ctx, res);
+                        if (i + 1 < var->nodes.size() || notEquals)
+                        {
+                            ctx->bytecode.emplace_back(Instruction::Opcode::dup2);
+                            ctx->bytecode.emplace_back(Instruction::Opcode::pusharrind);
+                        }
+                    }
+                }
+
+                GenerateExpression(assign->nodes.at(1), ctx, res);
+
+                // Deal with non-equal sign operations
+                if (notEquals)
+                {
+                    switch (assign->token.type)
+                    {
+                    case TokenType::PlusEquals:
+                        ctx->bytecode.emplace_back(Instruction::Opcode::add);
+                        break;
+                    case TokenType::MinusEquals:
+                        ctx->bytecode.emplace_back(Instruction::Opcode::sub);
+                        break;
+                    case TokenType::MultiplyEquals:
+                        ctx->bytecode.emplace_back(Instruction::Opcode::mul);
+                        break;
+                    case TokenType::DivideEquals:
+                        ctx->bytecode.emplace_back(Instruction::Opcode::div);
+                        break;
+                    case TokenType::ModEquals:
+                        ctx->bytecode.emplace_back(Instruction::Opcode::mod);
+                        break;
+                    case TokenType::BitwiseAndEquals:
+                        ctx->bytecode.emplace_back(Instruction::Opcode::bitand);
+                        break;
+                    case TokenType::BitwiseOrEquals:
+                        ctx->bytecode.emplace_back(Instruction::Opcode::bitor);
+                        break;
+                    case TokenType::BitwiseXorEquals:
+                        ctx->bytecode.emplace_back(Instruction::Opcode::bitxor);
+                        break;
+                    }
+                }
+
+                // Array sets
+                if (arr)
+                {
+                    for (int i = 0; i < var->nodes.size(); i++)
+                        ctx->bytecode.emplace_back(Instruction::Opcode::setarrind);
+                }
+
+                if (localId == -1)
+                    ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::setvarglb, string(var->content, ctx)));
+                else
+                    ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::setvarloc, localId));
+            }
             break;
+        }
         case Node::NodeType::ShorthandChar:
             // todo
             break;
@@ -228,7 +354,7 @@ namespace diannex
 
     void Bytecode::GenerateExpression(Node* expr, CompileContext* ctx, BytecodeResult* res)
     {
-        int i = 0; // Index within subnodes
+        int i = 0; // Index within subnodes (used in different ways)
 
         switch (expr->type)
         {
@@ -413,29 +539,122 @@ namespace diannex
             ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::makearr, expr->nodes.size()));
             break;
         }
-        case Node::NodeType::ExprPreIncrement:
+        case Node::NodeType::Variable:
         {
-            // todo
+            NodeContent* var = (NodeContent*)expr;
+            auto it = std::find(ctx->localStack.begin(), ctx->localStack.end(), var->content);
+            if (it == ctx->localStack.end())
+                ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushvarglb, string(var->content, ctx)));
+            else
+                ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushvarloc, std::distance(ctx->localStack.begin(), it)));
+
+            // Array accesses
+            while (i < expr->nodes.size())
+            {
+                GenerateExpression(expr->nodes.at(i++), ctx, res);
+                ctx->bytecode.emplace_back(Instruction::Opcode::pusharrind);
+            }
+            break;
+        }
+        case Node::NodeType::ExprPreIncrement:
+        case Node::NodeType::ExprPreDecrement:
+        {
+            NodeContent* var = (NodeContent*)(expr->nodes.at(0));
+            auto it = std::find(ctx->localStack.begin(), ctx->localStack.end(), var->content);
+            int localId;
+            if (it == ctx->localStack.end())
+            {
+                localId = -1;
+                ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushvarglb, string(var->content, ctx)));
+            }
+            else
+            {
+                localId = std::distance(ctx->localStack.begin(), it);
+                ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushvarloc, localId));
+            }
+
+            while (i < var->nodes.size())
+            {
+                GenerateExpression(var->nodes.at(i++), ctx, res);
+                ctx->bytecode.emplace_back(Instruction::Opcode::dup2);
+                ctx->bytecode.emplace_back(Instruction::Opcode::pusharrind);
+            }
+
+            ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushi, 1));
+            ctx->bytecode.emplace_back(expr->type == Node::NodeType::ExprPreIncrement ?
+                                        Instruction::Opcode::add :
+                                        Instruction::Opcode::sub);
+            if (i == 0)
+                ctx->bytecode.emplace_back(Instruction::Opcode::dup);
+            else
+                ctx->bytecode.emplace_back(Instruction::Opcode::save);
+
+            for (int j = 0; j < i; j++)
+                ctx->bytecode.emplace_back(Instruction::Opcode::setarrind);
+
+            if (localId == -1)
+                ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::setvarglb, string(var->content, ctx)));
+            else
+                ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::setvarloc, localId));
+
+            if (i != 0)
+                ctx->bytecode.emplace_back(Instruction::Opcode::load);
             break;
         }
         case Node::NodeType::ExprPostIncrement:
-        {
-            // todo
-            break;
-        }
-        case Node::NodeType::ExprPreDecrement:
-        {
-            // todo
-            break;
-        }
         case Node::NodeType::ExprPostDecrement:
         {
-            // todo
+            NodeContent* var = (NodeContent*)(expr->nodes.at(0));
+            auto it = std::find(ctx->localStack.begin(), ctx->localStack.end(), var->content);
+            int localId;
+            if (it == ctx->localStack.end())
+            {
+                localId = -1;
+                ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushvarglb, string(var->content, ctx)));
+            }
+            else
+            {
+                localId = std::distance(ctx->localStack.begin(), it);
+                ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushvarloc, localId));
+            }
+
+            while (i < var->nodes.size())
+            {
+                GenerateExpression(var->nodes.at(i++), ctx, res);
+                ctx->bytecode.emplace_back(Instruction::Opcode::dup2);
+                ctx->bytecode.emplace_back(Instruction::Opcode::pusharrind);
+            }
+
+            if (i == 0)
+                ctx->bytecode.emplace_back(Instruction::Opcode::dup);
+            else
+                ctx->bytecode.emplace_back(Instruction::Opcode::save);
+
+            ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushi, 1));
+            ctx->bytecode.emplace_back(expr->type == Node::NodeType::ExprPostIncrement ?
+                                        Instruction::Opcode::add :
+                                        Instruction::Opcode::sub);
+
+            for (int j = 0; j < i; j++)
+                ctx->bytecode.emplace_back(Instruction::Opcode::setarrind);
+
+            if (localId == -1)
+                ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::setvarglb, string(var->content, ctx)));
+            else
+                ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::setvarloc, localId));
+
+            if (i != 0)
+                ctx->bytecode.emplace_back(Instruction::Opcode::load);
             break;
         }
         case Node::NodeType::ExprAccessArray:
         {
-            // todo
+            GenerateExpression(expr->nodes.at(i++), ctx, res);
+            while (i < expr->nodes.size())
+            {
+                GenerateExpression(expr->nodes.at(i++), ctx, res);
+                ctx->bytecode.emplace_back(Instruction::Opcode::pusharrind);
+            }
             break;
         }
         case Node::NodeType::SceneFunction:

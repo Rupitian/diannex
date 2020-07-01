@@ -14,6 +14,10 @@ namespace diannex
 
             freeloc = 0x0A, // Frees a local variable from the stack frame: [ID]
 
+            // Special register instructions
+            save = 0x0B, // Copy the value on the top of the stack into the save register
+            load = 0x0C, // Push the value from the save register onto the top of the stack
+
             // Stack instructions
             pushi = 0x10, // Push 32-bit int: [int value]
             pushd = 0x11, // Push 64-bit floating point: [double value]
@@ -24,7 +28,7 @@ namespace diannex
             pushbints = 0x15, // Push internal binary interpolated string: [ID, expr count]
 
             makearr = 0x16, // Construct an array based off of stack: [size]
-            pusharrind = 0x17, // Extract a single value out of an array, removing it as well (uses stack for index)
+            pusharrind = 0x17, // Extract a single value out of an array, removing the array as well (uses stack for index)
             setarrind = 0x18, // Sets a value in an array on the top of the stack (uses stack for index and value)
 
             setvarglb = 0x19, // Set a global variable from the stack: [string name]
@@ -32,8 +36,9 @@ namespace diannex
             pushvarglb = 0x1B, // Pushes a global variable to the stack: [string name]
             pushvarloc = 0x1C, // Pushes a local variable to the stack: [ID]
 
-            pop = 0x1E, // Discards the value on the top of the stack
-            dup = 0x1F, // Duplicates the value on the top of the stack
+            pop = 0x1D, // Discards the value on the top of the stack
+            dup = 0x1E, // Duplicates the value on the top of the stack
+            dup2 = 0x1F, // Duplicates the values on the top two slots of the stack
 
             // Operators
             add = 0x20, // Adds the two values on the top of the stack, popping them, pushing the result
