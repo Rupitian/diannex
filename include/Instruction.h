@@ -19,6 +19,7 @@ namespace diannex
             load = 0x0C, // Push the value from the save register onto the top of the stack
 
             // Stack instructions
+            pushu = 0x0F, // Push undefined value to stack
             pushi = 0x10, // Push 32-bit int: [int value]
             pushd = 0x11, // Push 64-bit floating point: [double value]
 
@@ -76,14 +77,15 @@ namespace diannex
 
             choicebeg = 0x47, // Switches to the choice state in the interpreter- no other choices can run and
                               // only one textrun can execute until after choicesel is executed
-            choiceadd = 0x48, // Adds a choice, using the stack for the text and the % chance of appearing [int jump address]
-            choiceaddt = 0x49, // ditto, but also if an additional stack value is truthy [int jump address]
+            choiceadd = 0x48, // Adds a choice, using the stack for the text and the % chance of appearing [int relative jump address]
+            choiceaddt = 0x49, // ditto, but also if an additional stack value is truthy [int relative jump address]
             choicesel = 0x4A, // Pauses the interpreter, waiting for user input to select one of the choices, then jumps to one of them, resuming
 
-            chooseaddr = 0x4B, // Adds a new address to one of the possible next statements [int jump address] (to the current stack frame)
-            choosesel = 0x4C, // Jumps to one of the choices, using the addresses and chances/requirement values on the stack
+            chooseadd = 0x4B, // Adds a new address to one of the possible next statements, using stack for chances [int relative jump address] (to the current stack frame)
+            chooseaddt = 0x4C, // ditto, but also if an additional stack value is truthy [int relative jump address]
+            choosesel = 0x4D, // Jumps to one of the choices, using the addresses and chances/requirement values on the stack
 
-            textrun = 0x4D, // Pauses the interpreter, running a line of text from the stack
+            textrun = 0x4E, // Pauses the interpreter, running a line of text from the stack
 
             PATCH_CALL = 0xFF, // A call instruction to be patched on serialization to either call or callext [string function name]
         } opcode;

@@ -265,7 +265,12 @@ namespace diannex
     {
     }
 
-    NodeTextRun::NodeTextRun(std::string content, bool excludeTranslation)
+    NodeText::NodeText(NodeType type, std::string content, bool excludeTranslation)
+        : NodeContent(content, type), excludeTranslation(excludeTranslation)
+    {
+    }
+
+    NodeText::NodeText(std::string content, bool excludeTranslation)
         : NodeContent(content, NodeType::TextRun), excludeTranslation(excludeTranslation)
     {
     }
@@ -573,7 +578,7 @@ namespace diannex
                 {
                     if (t.type == TokenType::MarkedString)
                         parser->errors.push_back({ ParseError::ErrorType::UnexpectedMarkedString, t.line, t.column });
-                    NodeTextRun* res = new NodeTextRun(t.content, t.type == TokenType::ExcludeString);
+                    NodeText* res = new NodeText(t.content, t.type == TokenType::ExcludeString);
                     res->content = Parser::ProcessStringInterpolation(parser, t, t.content, &res->nodes);
                     return res;
                 }
@@ -598,7 +603,7 @@ namespace diannex
                     {
                         if (t.type == TokenType::MarkedString)
                             parser->errors.push_back({ ParseError::ErrorType::UnexpectedMarkedString, t.line, t.column });
-                        NodeTextRun* text = new NodeTextRun(next.content, next.type == TokenType::ExcludeString);
+                        NodeText* text = new NodeText(next.content, next.type == TokenType::ExcludeString);
                         text->content = Parser::ProcessStringInterpolation(parser, t, t.content, &text->nodes);
                         res->nodes.push_back(text);
                         parser->advance();
@@ -627,8 +632,8 @@ namespace diannex
                         case TokenType::MarkedString:
                         case TokenType::ExcludeString:
                         {
-                            NodeToken* text = new NodeToken(NodeType::ChoiceText, val);
-                            text->token.content = Parser::ProcessStringInterpolation(parser, val, val.content, &text->nodes);
+                            NodeText* text = new NodeText(NodeType::ChoiceText, val.content, val.type == TokenType::ExcludeString);
+                            text->content = Parser::ProcessStringInterpolation(parser, val, val.content, &text->nodes);
                             res->nodes.push_back(text);
                             parser->advance();
                             break;

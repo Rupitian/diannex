@@ -194,13 +194,14 @@ namespace diannex
         Scene/function statements
     */
 
-    class NodeTextRun : public NodeContent
+    class NodeText : public NodeContent
     {
     public:
-        NodeTextRun(std::string content, bool excludeTranslation);
+        NodeText(NodeType type, std::string content, bool excludeTranslation);
+        NodeText(std::string content, bool excludeTranslation);
         bool excludeTranslation;
     private:
-        NodeTextRun(const NodeTextRun&) = delete;
+        NodeText(const NodeText&) = delete;
     };
 
     class NodeToken : public Node

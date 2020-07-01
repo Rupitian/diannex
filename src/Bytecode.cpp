@@ -49,6 +49,22 @@ namespace diannex
         return res;
     }
 
+    static void pushLocalContext(CompileContext* ctx)
+    {
+        ctx->localCountStack.push_back(0);
+    }
+
+    static void popLocalContext(CompileContext* ctx)
+    {
+        int c = ctx->localCountStack.back();
+        ctx->localCountStack.pop_back();
+        for (int i = 0; i < c; i++)
+        {
+            ctx->localStack.pop_back();
+            ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::freeloc, ctx->localStack.size()));
+        }
+    }
+
     BytecodeResult* Bytecode::Generate(ParseResult* parsed, CompileContext* ctx)
     {
         BytecodeResult* res = new BytecodeResult;
@@ -78,7 +94,13 @@ namespace diannex
                     res->errors.push_back({ BytecodeError::ErrorType::SceneAlreadyExists, 0, 0, symbol.c_str() });
                 int pos = ctx->bytecode.size();
                 GenerateSceneBlock(n, ctx, res);
-                ctx->sceneBytecode.insert(std::make_pair(symbol, (pos == ctx->bytecode.size()) ? -1 : pos));
+                if (pos == ctx->bytecode.size())
+                    ctx->sceneBytecode.insert(std::make_pair(symbol, -1));
+                else
+                {
+                    ctx->bytecode.emplace_back(Instruction::Opcode::exit);
+                    ctx->sceneBytecode.insert(std::make_pair(symbol, pos));
+                }
                 ctx->symbolStack.pop_back();
                 break;
             }
@@ -142,22 +164,14 @@ namespace diannex
 
     void Bytecode::GenerateSceneBlock(Node* block, CompileContext* ctx, BytecodeResult* res)
     {
-        // Make new local context
-        ctx->localCountStack.push_back(0);
+        pushLocalContext(ctx);
 
         for (Node* n : block->nodes)
         {
             GenerateSceneStatement(n, ctx, res);
         }
 
-        // Remove local context, delete locals involved
-        int c = ctx->localCountStack.back();
-        ctx->localCountStack.pop_back();
-        for (int i = 0; i < c; i++)
-        {
-            ctx->localStack.pop_back();
-            ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::freeloc, ctx->localStack.size()));
-        }
+        popLocalContext(ctx);
     }
 
     void Bytecode::GenerateSceneStatement(Node* statement, CompileContext* ctx, BytecodeResult* res)
@@ -300,8 +314,44 @@ namespace diannex
             break;
         }
         case Node::NodeType::ShorthandChar:
-            // todo
+        {
+            NodeToken* sc = (NodeToken*)statement;
+            switch (sc->token.type)
+            {
+            case TokenType::String: // todo: add default setting to project file?
+            case TokenType::ExcludeString:
+            case TokenType::Identifier:
+                if (sc->nodes.size() == 1)
+                    ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushbs, string(sc->token.content, ctx)));
+                else
+                {
+                    for (int i = sc->nodes.size() - 1; i > 0; i--)
+                        GenerateExpression(sc->nodes.at(i), ctx, res);
+                    ctx->bytecode.push_back(Instruction::make_int2(Instruction::Opcode::pushbints, string(sc->token.content, ctx), sc->nodes.size()));
+                }
+                break;
+            case TokenType::MarkedString:
+                if (sc->nodes.size() == 1)
+                {
+                    ctx->bytecode.emplace_back(Instruction::Opcode::pushs);
+                    translationInfo(ctx, sc->token.content);
+                }
+                else
+                {
+                    for (int i = sc->nodes.size() - 1; i > 0; i--)
+                        GenerateExpression(sc->nodes.at(i), ctx, res);
+                    ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushints, sc->nodes.size()));
+                    translationInfo(ctx, sc->token.content);
+                }
+                break;
+            }
+            ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::PATCH_CALL, string("char", ctx)));
+            ctx->bytecode.emplace_back(Instruction::Opcode::pop);
+            pushLocalContext(ctx);
+            GenerateSceneStatement(sc->nodes.at(0), ctx, res);
+            popLocalContext(ctx);
             break;
+        }
         case Node::NodeType::SceneFunction:
         {
             for (auto it = statement->nodes.rbegin(); it != statement->nodes.rend(); ++it)
@@ -311,17 +361,153 @@ namespace diannex
             break;
         }
         case Node::NodeType::TextRun:
-            // todo
+        case Node::NodeType::ChoiceText:
+        {
+            NodeText* tr = (NodeText*)statement;
+            if (tr->excludeTranslation)
+            {
+                if (tr->nodes.size() == 0)
+                    ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushbs, string(tr->content, ctx)));
+                else
+                {
+                    for (auto it = tr->nodes.rbegin(); it != tr->nodes.rend(); ++it)
+                        GenerateExpression(*it, ctx, res);
+                    ctx->bytecode.push_back(Instruction::make_int2(Instruction::Opcode::pushbints, string(tr->content, ctx), tr->nodes.size()));
+                }
+            }
+            else
+            {
+                if (tr->nodes.size() == 0)
+                {
+                    ctx->bytecode.emplace_back(Instruction::Opcode::pushs);
+                    translationInfo(ctx, tr->content);
+                }
+                else
+                {
+                    for (auto it = tr->nodes.rbegin(); it != tr->nodes.rend(); ++it)
+                        GenerateExpression(*it, ctx, res);
+                    ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushints, tr->nodes.size()));
+                    translationInfo(ctx, tr->content);
+                }
+            }
+            if (statement->type == Node::NodeType::TextRun)
+                ctx->bytecode.emplace_back(Instruction::Opcode::textrun);
             break;
+        }
         case Node::NodeType::Choice:
-            // todo
+        {
+            ctx->bytecode.emplace_back(Instruction::Opcode::choicebeg);
+
+            // Statement before
+            pushLocalContext(ctx);
+            GenerateSceneStatement(statement->nodes.at(0), ctx, res);
+            popLocalContext(ctx);
+
+            std::vector<int> choices;
+            for (int i = 1; i < statement->nodes.size(); i++)
+            {
+                // Text
+                Node* t = statement->nodes.at(i++);
+                if (t->type == Node::NodeType::None)
+                    ctx->bytecode.emplace_back(Instruction::Opcode::pushu);
+                else
+                    GenerateSceneStatement(t, ctx, res);
+
+                // Chance
+                GenerateExpression(statement->nodes.at(i++), ctx, res);
+
+                // Require
+                Node* r = statement->nodes.at(i++);
+                if (r->type == Node::NodeType::None)
+                {
+                    choices.push_back(patchInstruction(Instruction::Opcode::choiceadd, ctx));
+                }
+                else
+                {
+                    GenerateExpression(r, ctx, res);
+                    choices.push_back(patchInstruction(Instruction::Opcode::choiceaddt, ctx));
+                }
+            }
+
+            ctx->bytecode.emplace_back(Instruction::Opcode::choicesel);
+
+            // Actual branch paths
+            int j = 0;
+            std::vector<int> jumps;
+            for (int i = 4; i < statement->nodes.size(); i += 4)
+            {
+                patch(choices.at(j++), ctx);
+                pushLocalContext(ctx);
+                GenerateSceneStatement(statement->nodes.at(i), ctx, res);
+                popLocalContext(ctx);
+                jumps.push_back(patchInstruction(Instruction::Opcode::j, ctx));
+            }
+
+            // End location of the choice
+            for (int i = 0; i < jumps.size(); i++)
+                patch(jumps.at(i), ctx);
             break;
+        }
         case Node::NodeType::Choose:
-            // todo
+        {
+            std::vector<int> choices;
+            for (int i = 0; i < statement->nodes.size(); i++)
+            {
+                // Chance
+                GenerateExpression(statement->nodes.at(i++), ctx, res);
+
+                // Require
+                Node* r = statement->nodes.at(i++);
+                if (r->type == Node::NodeType::None)
+                {
+                    choices.push_back(patchInstruction(Instruction::Opcode::chooseadd, ctx));
+                }
+                else
+                {
+                    GenerateExpression(r, ctx, res);
+                    choices.push_back(patchInstruction(Instruction::Opcode::chooseaddt, ctx));
+                }
+            }
+
+            ctx->bytecode.emplace_back(Instruction::Opcode::choosesel);
+
+            // Actual branch paths
+            int j = 0;
+            std::vector<int> jumps;
+            for (int i = 2; i < statement->nodes.size(); i += 3)
+            {
+                patch(choices.at(j++), ctx);
+                pushLocalContext(ctx);
+                GenerateSceneStatement(statement->nodes.at(i), ctx, res);
+                popLocalContext(ctx);
+                jumps.push_back(patchInstruction(Instruction::Opcode::j, ctx));
+            }
+
+            // End location of the choice
+            for (int i = 0; i < jumps.size(); i++)
+                patch(jumps.at(i), ctx);
             break;
+        }
         case Node::NodeType::If:
-            // todo
+        {
+            GenerateExpression(statement->nodes.at(0), ctx, res);
+            int jumpFalse = patchInstruction(Instruction::Opcode::jf, ctx);
+            pushLocalContext(ctx);
+            GenerateSceneStatement(statement->nodes.at(1), ctx, res);
+            popLocalContext(ctx);
+            if (statement->nodes.size() == 3)
+            {
+                int jump = patchInstruction(Instruction::Opcode::j, ctx);
+                patch(jumpFalse, ctx);
+                pushLocalContext(ctx);
+                GenerateSceneStatement(statement->nodes.at(2), ctx, res);
+                popLocalContext(ctx);
+                patch(jump, ctx);
+            }
+            else
+                patch(jumpFalse, ctx);
             break;
+        }
         case Node::NodeType::While:
             // todo
             break;
@@ -347,7 +533,7 @@ namespace diannex
             // todo
             break;
         case Node::NodeType::MarkedComment:
-            // todo
+            translationInfo(ctx, ((NodeContent*)statement)->content, true);
             break;
         }
     }
@@ -482,7 +668,7 @@ namespace diannex
                 break;
             case TokenType::Percentage:
                 if (constant->token.content.find('.') == std::string::npos)
-                    ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushd, std::stoi(constant->token.content) / 100.0));
+                    ctx->bytecode.push_back(Instruction::make_double(Instruction::Opcode::pushd, std::stoi(constant->token.content) / 100.0));
                 else
                     ctx->bytecode.push_back(Instruction::make_double(Instruction::Opcode::pushd, std::stod(constant->token.content) / 100.0));
                 break;
