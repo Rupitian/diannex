@@ -70,9 +70,9 @@ namespace diannex
         }
     }
 
-    static void pushLoopContext(CompileContext* ctx)
+    static void pushLoopContext(CompileContext* ctx, std::vector<Instruction> cleanup = {})
     {
-        ctx->loopStack.push_back({ std::vector<int>(), std::vector<int>() });
+        ctx->loopStack.push_back({ std::vector<int>(), std::vector<int>(), cleanup });
     }
 
     static void popLoopContext(int continueInd, CompileContext* ctx)
@@ -565,11 +565,24 @@ namespace diannex
             break;
         }
         case Node::NodeType::Do:
-            // todo
+        {
+            int top = ctx->bytecode.size();
+            pushLocalContext(ctx);
+            pushLoopContext(ctx);
+            GenerateSceneStatement(statement->nodes.at(0), ctx, res);
+            int cont = ctx->bytecode.size();
+            GenerateExpression(statement->nodes.at(1), ctx, res);
+            ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::jt, top - ctx->bytecode.size()));
+            popLoopContext(cont, ctx);
+            popLocalContext(ctx);
             break;
+        }
         case Node::NodeType::Repeat:
+        {
+            GenerateExpression(statement->nodes.at(0), ctx, res);
             // todo
             break;
+        }
         case Node::NodeType::Switch:
             // todo
             break;
@@ -600,8 +613,53 @@ namespace diannex
             break;
         }
         case Node::NodeType::Return:
-            // todo
+        {
+            bool cleanup = ctx->loopStack.size() != 0 || ctx->localStack.size() != 0;
+            std::vector<Instruction> cleanupInstructions;
+
+            if (cleanup)
+            {
+                // Make instructions for cleaning up, and check if it's even necessary
+                for (auto it = ctx->loopStack.rbegin(); it != ctx->loopStack.rend(); ++it)
+                {
+                    cleanupInstructions.insert(cleanupInstructions.end(), 
+                                               (*it).returnCleanup.begin(), (*it).returnCleanup.end());
+                }
+
+                for (int i = ctx->localStack.size() - 1; i >= 0; i--)
+                {
+                    cleanupInstructions.push_back(Instruction::make_int(Instruction::Opcode::freeloc, i));
+                }
+
+                cleanup = cleanupInstructions.size() != 0;
+            }
+
+            // Expression to return
+            if (statement->nodes.size() == 1)
+            {
+                GenerateExpression(statement->nodes.at(0), ctx, res);
+                if (cleanup)
+                {
+                    ctx->bytecode.emplace_back(Instruction::Opcode::save);
+                    ctx->bytecode.emplace_back(Instruction::Opcode::pop);
+                }
+            }
+
+            // Emit cleaning up instructions
+            if (cleanup)
+                ctx->bytecode.insert(ctx->bytecode.end(), cleanupInstructions.begin(), cleanupInstructions.end());
+
+            // Actually return
+            if (statement->nodes.size() == 0)
+                ctx->bytecode.emplace_back(Instruction::Opcode::exit);
+            else
+            {
+                if (cleanup)
+                    ctx->bytecode.emplace_back(Instruction::Opcode::load);
+                ctx->bytecode.emplace_back(Instruction::Opcode::ret);
+            }
             break;
+        }
         case Node::NodeType::MarkedComment:
             translationInfo(ctx, ((NodeContent*)statement)->content, true);
             break;
