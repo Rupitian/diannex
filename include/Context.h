@@ -18,6 +18,12 @@ namespace diannex
         std::string text;
     };
 
+    struct LoopContext
+    {
+        int conditionIndex;
+        std::vector<int> endLoopPatch;
+    };
+
     struct CompileContext
     {
         ProjectFormat* project;
@@ -35,6 +41,7 @@ namespace diannex
         std::vector<std::string> symbolStack;
         std::vector<std::string> localStack;
         std::vector<int> localCountStack;
+        std::vector<LoopContext> loopStack;
         std::vector<TranslationInfo> translationInfo;
 
         ~CompileContext()

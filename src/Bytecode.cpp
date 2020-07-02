@@ -65,6 +65,19 @@ namespace diannex
         }
     }
 
+    static void pushLoopContext(int condInd, CompileContext* ctx)
+    {
+        ctx->loopStack.push_back({ condInd, std::vector<int>() });
+    }
+
+    static void popLoopContext(CompileContext* ctx)
+    {
+        auto& vec = ctx->loopStack.back().endLoopPatch;
+        for (auto it = vec.begin(); it != vec.end(); ++it)
+            patch(*it, ctx);
+        ctx->loopStack.pop_back();
+    }
+
     BytecodeResult* Bytecode::Generate(ParseResult* parsed, CompileContext* ctx)
     {
         BytecodeResult* res = new BytecodeResult;
@@ -509,8 +522,19 @@ namespace diannex
             break;
         }
         case Node::NodeType::While:
-            // todo
+        {
+            int cond = ctx->bytecode.size();
+            GenerateExpression(statement->nodes.at(0), ctx, res);
+            int fail = patchInstruction(Instruction::Opcode::jf, ctx);
+            pushLoopContext(cond, ctx);
+            pushLocalContext(ctx);
+            GenerateSceneStatement(statement->nodes.at(1), ctx, res);
+            popLocalContext(ctx);
+            ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::j, cond - ctx->bytecode.size()));
+            popLoopContext(ctx);
+            patch(fail, ctx);
             break;
+        }
         case Node::NodeType::For:
             // todo
             break;

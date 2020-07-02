@@ -12,7 +12,7 @@ namespace diannex
             nop = 0x00, // No-op
             dline = 0x01, // Debug line: [line #]
 
-            freeloc = 0x0A, // Frees a local variable from the stack frame: [ID]
+            freeloc = 0x0A, // Frees a local variable from the stack frame (IF IT EXISTS!): [ID]
 
             // Special register instructions
             save = 0x0B, // Copy the value on the top of the stack into the save register
