@@ -908,12 +908,12 @@ namespace diannex
                 case KeywordType::Continue:
                 {
                     parser->advance();
-                    return new Node(NodeType::Continue);
+                    return new NodeToken(NodeType::Continue, t);
                 }
                 case KeywordType::Break:
                 {
                     parser->advance();
-                    return new Node(NodeType::Break);
+                    return new NodeToken(NodeType::Break, t);
                 }
                 case KeywordType::Return:
                 {

@@ -15,6 +15,8 @@ namespace diannex
             FunctionAlreadyExists,
             DefinitionBlockAlreadyExists,
             LocalVariableAlreadyExists,
+            ContinueOutsideOfLoop,
+            BreakOutsideOfLoop
         };
 
         ErrorType type;

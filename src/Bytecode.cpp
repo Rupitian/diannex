@@ -41,6 +41,11 @@ namespace diannex
         ctx->bytecode.at(ind).arg = ctx->bytecode.size() - ind;
     }
 
+    static void patch(int ind, int targ, CompileContext* ctx)
+    {
+        ctx->bytecode.at(ind).arg = targ - ind;
+    }
+
     static int string(std::string str, CompileContext* ctx)
     {
         int res = std::find(ctx->internalStrings.begin(), ctx->internalStrings.end(), str) - ctx->internalStrings.begin();
@@ -65,16 +70,23 @@ namespace diannex
         }
     }
 
-    static void pushLoopContext(int condInd, CompileContext* ctx)
+    static void pushLoopContext(CompileContext* ctx)
     {
-        ctx->loopStack.push_back({ condInd, std::vector<int>() });
+        ctx->loopStack.push_back({ std::vector<int>(), std::vector<int>() });
     }
 
-    static void popLoopContext(CompileContext* ctx)
+    static void popLoopContext(int continueInd, CompileContext* ctx)
     {
-        auto& vec = ctx->loopStack.back().endLoopPatch;
-        for (auto it = vec.begin(); it != vec.end(); ++it)
-            patch(*it, ctx);
+        {
+            auto& vec = ctx->loopStack.back().continuePatch;
+            for (auto it = vec.begin(); it != vec.end(); ++it)
+                patch(*it, continueInd, ctx);
+        }
+        {
+            auto& vec = ctx->loopStack.back().endLoopPatch;
+            for (auto it = vec.begin(); it != vec.end(); ++it)
+                patch(*it, ctx);
+        }
         ctx->loopStack.pop_back();
     }
 
@@ -526,18 +538,32 @@ namespace diannex
             int cond = ctx->bytecode.size();
             GenerateExpression(statement->nodes.at(0), ctx, res);
             int fail = patchInstruction(Instruction::Opcode::jf, ctx);
-            pushLoopContext(cond, ctx);
+            pushLoopContext(ctx);
             pushLocalContext(ctx);
             GenerateSceneStatement(statement->nodes.at(1), ctx, res);
             popLocalContext(ctx);
             ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::j, cond - ctx->bytecode.size()));
-            popLoopContext(ctx);
+            popLoopContext(cond, ctx);
             patch(fail, ctx);
             break;
         }
         case Node::NodeType::For:
-            // todo
+        {
+            pushLocalContext(ctx);
+            GenerateSceneStatement(statement->nodes.at(0), ctx, res);
+            int cond = ctx->bytecode.size();
+            GenerateExpression(statement->nodes.at(1), ctx, res);
+            int fail = patchInstruction(Instruction::Opcode::jf, ctx);
+            pushLoopContext(ctx);
+            GenerateSceneStatement(statement->nodes.at(3), ctx, res);
+            int cont = ctx->bytecode.size();
+            GenerateSceneStatement(statement->nodes.at(2), ctx, res);
+            ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::j, cond - ctx->bytecode.size()));
+            patch(fail, ctx);
+            popLoopContext(cont, ctx);
+            popLocalContext(ctx);
             break;
+        }
         case Node::NodeType::Do:
             // todo
             break;
@@ -548,11 +574,31 @@ namespace diannex
             // todo
             break;
         case Node::NodeType::Continue:
-            // todo
+        {
+            if (ctx->loopStack.size() == 0)
+            {
+                Token t = ((NodeToken*)statement)->token;
+                res->errors.push_back({ BytecodeError::ErrorType::ContinueOutsideOfLoop, t.line, t.column });
+                break;
+            }
+
+            ctx->loopStack.back().continuePatch.push_back(patchInstruction(Instruction::Opcode::j, ctx));
+
             break;
+        }
         case Node::NodeType::Break:
-            // todo
+        {
+            if (ctx->loopStack.size() == 0)
+            {
+                Token t = ((NodeToken*)statement)->token;
+                res->errors.push_back({ BytecodeError::ErrorType::BreakOutsideOfLoop, t.line, t.column });
+                break;
+            }
+
+            ctx->loopStack.back().endLoopPatch.push_back(patchInstruction(Instruction::Opcode::j, ctx));
+            
             break;
+        }
         case Node::NodeType::Return:
             // todo
             break;

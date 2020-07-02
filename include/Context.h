@@ -20,7 +20,7 @@ namespace diannex
 
     struct LoopContext
     {
-        int conditionIndex;
+        std::vector<int> continuePatch;
         std::vector<int> endLoopPatch;
     };
 
