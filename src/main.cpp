@@ -210,9 +210,35 @@ int main(int argc, char** argv)
 
             for (BytecodeError& e : bytecode->errors)
             {
-                std::cout << "[" << kvp.first << ":" << e.line << ":" << e.column << "] ";
-
-                // TODO
+                if (e.line == 0 && e.column == 0)
+                    std::cout << "[" << kvp.first << ":?:?] ";
+                else
+                    std::cout << "[" << kvp.first << ":" << e.line << ":" << e.column << "] ";
+                
+                switch (e.type)
+                {
+                case BytecodeError::ErrorType::SceneAlreadyExists:
+                    std::cout << "Duplicate scene name '" << e.info1 << "'." << std::endl;
+                    break;
+                case BytecodeError::ErrorType::FunctionAlreadyExists:
+                    std::cout << "Duplicate function name '" << e.info1 << "'." << std::endl;
+                    break;
+                case BytecodeError::ErrorType::DefinitionBlockAlreadyExists:
+                    std::cout << "Duplicate definition block name '" << e.info1 << "'." << std::endl;
+                    break;
+                case BytecodeError::ErrorType::LocalVariableAlreadyExists:
+                    std::cout << "Local variable '" << e.info1 << "' already defined." << std::endl;
+                    break;
+                case BytecodeError::ErrorType::ContinueOutsideOfLoop:
+                    std::cout << "Continue statement outside of a loop." << std::endl;
+                    break;
+                case BytecodeError::ErrorType::BreakOutsideOfLoop:
+                    std::cout << "Break statement outside of a loop or switch statement." << std::endl;
+                    break;
+                case BytecodeError::ErrorType::StatementsBeforeSwitchCase:
+                    std::cout << "Statements present before any cases in switch statement." << std::endl;
+                    break;
+                }
             }
         }
     }
