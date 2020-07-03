@@ -10,7 +10,6 @@ namespace diannex
         enum Opcode
         {
             nop = 0x00, // No-op
-            dline = 0x01, // Debug line: [line #]
 
             freeloc = 0x0A, // Frees a local variable from the stack frame (IF IT EXISTS!): [ID]
 

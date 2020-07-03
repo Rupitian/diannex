@@ -16,7 +16,8 @@ namespace diannex
             DefinitionBlockAlreadyExists,
             LocalVariableAlreadyExists,
             ContinueOutsideOfLoop,
-            BreakOutsideOfLoop
+            BreakOutsideOfLoop,
+            StatementsBeforeSwitchCase
         };
 
         ErrorType type;

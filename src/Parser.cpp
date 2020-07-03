@@ -869,7 +869,7 @@ namespace diannex
                     parser->skipNewlines();
                     Node* value = Node::ParseExpression(parser);
 
-                    Node* res = new Node(NodeType::Switch);
+                    NodeToken* res = new NodeToken(NodeType::Switch, t);
                     res->nodes.push_back(value);
 
                     parser->ensureToken(TokenType::OpenCurly); 

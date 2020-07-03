@@ -44,6 +44,7 @@ namespace diannex
         std::vector<int> localCountStack;
         std::vector<LoopContext> loopStack;
         std::vector<TranslationInfo> translationInfo;
+        bool generatingFunction = false;
 
         ~CompileContext()
         {

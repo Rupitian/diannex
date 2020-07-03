@@ -75,12 +75,19 @@ namespace diannex
         ctx->loopStack.push_back({ std::vector<int>(), std::vector<int>(), cleanup });
     }
 
-    static void popLoopContext(int continueInd, CompileContext* ctx)
+    static void popLoopContext(int continueInd, CompileContext* ctx, BytecodeResult* res = nullptr)
     {
         {
-            auto& vec = ctx->loopStack.back().continuePatch;
-            for (auto it = vec.begin(); it != vec.end(); ++it)
-                patch(*it, continueInd, ctx);
+            if (continueInd == -1 && ctx->loopStack.back().continuePatch.size() != 0)
+            {
+                res->errors.push_back({ BytecodeError::ErrorType::ContinueOutsideOfLoop, 0, 0 });
+            }
+            else
+            {
+                auto& vec = ctx->loopStack.back().continuePatch;
+                for (auto it = vec.begin(); it != vec.end(); ++it)
+                    patch(*it, continueInd, ctx);
+            }
         }
         {
             auto& vec = ctx->loopStack.back().endLoopPatch;
@@ -117,8 +124,12 @@ namespace diannex
                 const std::string& symbol = expandSymbol(ctx);
                 if (ctx->sceneBytecode.count(symbol))
                     res->errors.push_back({ BytecodeError::ErrorType::SceneAlreadyExists, 0, 0, symbol.c_str() });
+               
                 int pos = ctx->bytecode.size();
+                ctx->generatingFunction = false;
+
                 GenerateSceneBlock(n, ctx, res);
+
                 if (pos == ctx->bytecode.size())
                     ctx->sceneBytecode.insert(std::make_pair(symbol, -1));
                 else
@@ -126,17 +137,35 @@ namespace diannex
                     ctx->bytecode.emplace_back(Instruction::Opcode::exit);
                     ctx->sceneBytecode.insert(std::make_pair(symbol, pos));
                 }
+
                 ctx->symbolStack.pop_back();
                 break;
             }
             case Node::NodeType::Function:
             {
-                ctx->symbolStack.push_back(((NodeContent*)n)->content);
+                NodeFunc* func = ((NodeFunc*)n);
+                ctx->symbolStack.push_back(func->name);
                 const std::string& symbol = expandSymbol(ctx);
                 if (ctx->functionBytecode.count(symbol))
                     res->errors.push_back({ BytecodeError::ErrorType::FunctionAlreadyExists, 0, 0, symbol.c_str() });
-                //GenerateFunctionBlock(symbol, n, ctx, res);
-                // todo
+                int pos = ctx->bytecode.size();
+                ctx->generatingFunction = true;
+
+                pushLocalContext(ctx);
+                ctx->localCountStack.back() = func->args.size();
+                for (auto it = func->args.begin(); it != func->args.end(); ++it)
+                    ctx->localStack.push_back(it->content);
+                GenerateSceneBlock(n, ctx, res);
+                popLocalContext(ctx);
+
+                if (pos == ctx->bytecode.size())
+                    ctx->functionBytecode.insert(std::make_pair(symbol, -1));
+                else
+                {
+                    ctx->bytecode.emplace_back(Instruction::Opcode::exit);
+                    ctx->functionBytecode.insert(std::make_pair(symbol, pos));
+                }
+
                 ctx->symbolStack.pop_back();
                 break;
             }
@@ -580,12 +609,105 @@ namespace diannex
         case Node::NodeType::Repeat:
         {
             GenerateExpression(statement->nodes.at(0), ctx, res);
-            // todo
+            int top = ctx->bytecode.size();
+            ctx->bytecode.emplace_back(Instruction::Opcode::dup);
+            ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushi, 0));
+            ctx->bytecode.emplace_back(Instruction::Opcode::cmpgt);
+            int fail = patchInstruction(Instruction::Opcode::jf, ctx);
+            pushLocalContext(ctx);
+            pushLoopContext(ctx, { {Instruction::Opcode::pop} });
+            GenerateSceneStatement(statement->nodes.at(1), ctx, res);
+            int cont = ctx->bytecode.size();
+            ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushi, 1));
+            ctx->bytecode.emplace_back(Instruction::Opcode::sub);
+            ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::j, top - ctx->bytecode.size()));
+            patch(fail, ctx);
+            popLoopContext(cont, ctx);
+            ctx->bytecode.emplace_back(Instruction::Opcode::pop);
+            popLocalContext(ctx);
             break;
         }
         case Node::NodeType::Switch:
-            // todo
+        {
+            LoopContext* enclosing = nullptr;
+            if (ctx->loopStack.size() != 0)
+                enclosing = &ctx->loopStack.back();
+
+            GenerateExpression(statement->nodes.at(0), ctx, res);
+            pushLocalContext(ctx);
+            pushLoopContext(ctx, { {Instruction::Opcode::pop} });
+
+            std::vector<std::pair<int /* patch */, int /* index in nodes */>> cases;
+
+            int defaultInd = -1;
+            int defaultInsertLoc = -1;
+
+            // Find indices of cases, write branches
+            bool foundCase = false;
+            for (int i = 1; i < statement->nodes.size(); i++)
+            {
+                Node* curr = statement->nodes.at(i);
+                switch (curr->type)
+                {
+                case Node::NodeType::SwitchCase:
+                    foundCase = true;
+
+                    ctx->bytecode.emplace_back(Instruction::Opcode::dup);
+                    GenerateExpression(curr->nodes.at(0), ctx, res);
+                    ctx->bytecode.emplace_back(Instruction::Opcode::cmpeq);
+                    cases.emplace_back(std::make_pair(patchInstruction(Instruction::Opcode::jt, ctx), i));
+                    break;
+                case Node::NodeType::SwitchDefault:
+                    foundCase = true;
+                    
+                    defaultInd = i;
+                    defaultInsertLoc = cases.size();
+                    break;
+                default:
+                    if (!foundCase)
+                    {
+                        Token& t = ((NodeToken*)statement)->token;
+                        res->errors.push_back({ BytecodeError::ErrorType::StatementsBeforeSwitchCase, t.line, t.column });
+                    }
+                    break;
+                }
+            }
+
+            // todo? check for duplicates?
+
+            int allFail;
+            if (defaultInd != -1)
+            {
+                allFail = -1;
+                cases.insert(cases.begin() + defaultInsertLoc, std::make_pair(patchInstruction(Instruction::Opcode::j, ctx), defaultInd));
+            } else
+                allFail = patchInstruction(Instruction::Opcode::j, ctx);
+
+            // Write statements
+            for (auto it = cases.begin(); it != cases.end(); ++it)
+            {
+                auto next = std::next(it);
+                int end = (next == cases.end()) ? statement->nodes.size() : next->second;
+                patch(it->first, ctx);
+                for (int i = it->second + 1; i < end; i++)
+                    GenerateSceneStatement(statement->nodes.at(i), ctx, res);
+            }
+
+            if (enclosing && ctx->loopStack.back().continuePatch.size() != 0)
+            {
+                int end = patchInstruction(Instruction::Opcode::j, ctx);
+                popLoopContext(ctx->bytecode.size(), ctx);
+                ctx->bytecode.emplace_back(Instruction::Opcode::pop);
+                ctx->loopStack.back().continuePatch.push_back(patchInstruction(Instruction::Opcode::j, ctx));
+                patch(end, ctx);
+            } else
+                popLoopContext(-1, ctx, res);
+            if (allFail != -1)
+                patch(allFail, ctx);
+            ctx->bytecode.emplace_back(Instruction::Opcode::pop);
+            popLocalContext(ctx);
             break;
+        }
         case Node::NodeType::Continue:
         {
             if (ctx->loopStack.size() == 0)
@@ -596,7 +718,6 @@ namespace diannex
             }
 
             ctx->loopStack.back().continuePatch.push_back(patchInstruction(Instruction::Opcode::j, ctx));
-
             break;
         }
         case Node::NodeType::Break:
@@ -609,7 +730,6 @@ namespace diannex
             }
 
             ctx->loopStack.back().endLoopPatch.push_back(patchInstruction(Instruction::Opcode::j, ctx));
-            
             break;
         }
         case Node::NodeType::Return:
@@ -637,6 +757,7 @@ namespace diannex
             // Expression to return
             if (statement->nodes.size() == 1)
             {
+
                 GenerateExpression(statement->nodes.at(0), ctx, res);
                 if (cleanup)
                 {
