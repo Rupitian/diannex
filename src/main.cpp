@@ -243,6 +243,16 @@ int main(int argc, char** argv)
         }
     }
 
+    if (fatalError)
+    {
+        std::cout << std::endl << rang::fgB::red << "Not proceeding with compilation due to fatal errors." << rang::fg::reset << std::endl;
+        return 1;
+    }
+
+    // TODO write binary
+
+    // TODO write translation files
+
     auto stop = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
 
@@ -253,14 +263,5 @@ int main(int argc, char** argv)
         std::cout << "Finished! ";
     std::cout << "Took " << duration.count() << " milliseconds." << rang::fg::reset << std::endl;
 
-    /*for (auto& tokens : context.tokenList)
-    {
-        std::cout << std::endl << "Tokens from '" << tokens.first << "':" << std::endl;
-        for (auto& token : tokens.second)
-        {
-            std::cout << token << std::endl;
-        }
-    }*/
-    
     return 0;
 }
