@@ -6,6 +6,7 @@
 #include <vector>
 #include <unordered_set>
 #include <optional>
+#include <variant>
 
 #include "Instruction.h"
 
@@ -35,7 +36,7 @@ namespace diannex
         std::unordered_map<std::string, int> sceneBytecode;
         std::unordered_map<std::string, int> functionBytecode;
         std::unordered_set<std::string> definitions;
-        std::unordered_map<std::string, std::pair<std::optional<std::string>, int>> definitionBytecode;
+        std::unordered_map<std::string, std::pair<std::variant<int, std::string>, int>> definitionBytecode;
         std::vector<Instruction> bytecode;
         std::vector<std::string> internalStrings;
         std::vector<std::string> symbolStrings;
@@ -43,6 +44,7 @@ namespace diannex
         std::vector<std::string> localStack;
         std::vector<int> localCountStack;
         std::vector<LoopContext> loopStack;
+        int translationStringIndex = 0;
         std::vector<TranslationInfo> translationInfo;
         bool generatingFunction = false;
 

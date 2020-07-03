@@ -16,18 +16,32 @@ namespace diannex
         return ss.str();
     }
 
-    static void translationInfo(CompileContext* ctx, std::string text, bool isComment = false)
+    static int translationInfo(CompileContext* ctx, std::string text, bool isComment = false)
     {
+        int res = ctx->translationStringIndex;
         if (ctx->project->options.translationOutput.empty())
         {
             if (!isComment)
             {
                 ctx->translationInfo.push_back({ "", false, text });
+                ctx->translationStringIndex++;
             }
-        } else if (ctx->project->options.translationPrivate)
-            ctx->translationInfo.push_back({ expandSymbol(ctx), isComment, text });
+        }
+        else if (ctx->project->options.translationPrivate)
+        {
+            if (!isComment)
+            {
+                ctx->translationInfo.push_back({ expandSymbol(ctx), false, text });
+                ctx->translationStringIndex++;
+            } else
+                ctx->translationInfo.push_back({ expandSymbol(ctx), true, text });
+        }
         else if (!isComment)
+        {
             ctx->translationInfo.push_back({ "", false, text });
+            ctx->translationStringIndex++;
+        }
+        return res;
     }
 
     static int patchInstruction(Instruction::Opcode opcode, CompileContext* ctx)
@@ -203,8 +217,7 @@ namespace diannex
                         }
                         else
                         {
-                            ctx->definitionBytecode.insert(std::make_pair(symbol + '.' + def->key, std::make_pair(std::nullopt, hasExpr ? pos : -1)));
-                            translationInfo(ctx, def->value);
+                            ctx->definitionBytecode.insert(std::make_pair(symbol + '.' + def->key, std::make_pair(translationInfo(ctx, def->value), hasExpr ? pos : -1)));
                         }
                     }
                 }
@@ -387,15 +400,13 @@ namespace diannex
             case TokenType::MarkedString:
                 if (sc->nodes.size() == 1)
                 {
-                    ctx->bytecode.emplace_back(Instruction::Opcode::pushs);
-                    translationInfo(ctx, sc->token.content);
+                    ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushs, translationInfo(ctx, sc->token.content)));
                 }
                 else
                 {
                     for (int i = sc->nodes.size() - 1; i > 0; i--)
                         GenerateExpression(sc->nodes.at(i), ctx, res);
-                    ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushints, sc->nodes.size()));
-                    translationInfo(ctx, sc->token.content);
+                    ctx->bytecode.push_back(Instruction::make_int2(Instruction::Opcode::pushints, translationInfo(ctx, sc->token.content), sc->nodes.size()));
                 }
                 break;
             }
@@ -433,15 +444,13 @@ namespace diannex
             {
                 if (tr->nodes.size() == 0)
                 {
-                    ctx->bytecode.emplace_back(Instruction::Opcode::pushs);
-                    translationInfo(ctx, tr->content);
+                    ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushs, translationInfo(ctx, tr->content)));
                 }
                 else
                 {
                     for (auto it = tr->nodes.rbegin(); it != tr->nodes.rend(); ++it)
                         GenerateExpression(*it, ctx, res);
-                    ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushints, tr->nodes.size()));
-                    translationInfo(ctx, tr->content);
+                    ctx->bytecode.push_back(Instruction::make_int2(Instruction::Opcode::pushints, translationInfo(ctx, tr->content), tr->nodes.size()));
                 }
             }
             if (statement->type == Node::NodeType::TextRun)
@@ -935,15 +944,13 @@ namespace diannex
             case TokenType::MarkedString:
                 if (constant->nodes.size() == 0)
                 {
-                    ctx->bytecode.emplace_back(Instruction::Opcode::pushs);
-                    translationInfo(ctx, constant->token.content);
+                    ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushs, translationInfo(ctx, constant->token.content)));
                 }
                 else
                 {
                     for (auto it = constant->nodes.rbegin(); it != constant->nodes.rend(); ++it)
                         GenerateExpression(*it, ctx, res);
-                    ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushints, constant->nodes.size()));
-                    translationInfo(ctx, constant->token.content);
+                    ctx->bytecode.push_back(Instruction::make_int2(Instruction::Opcode::pushints, translationInfo(ctx, constant->token.content), constant->nodes.size()));
                 }
                 break;
             }

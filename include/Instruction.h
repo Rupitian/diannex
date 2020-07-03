@@ -22,8 +22,8 @@ namespace diannex
             pushi = 0x10, // Push 32-bit int: [int value]
             pushd = 0x11, // Push 64-bit floating point: [double value]
 
-            pushs = 0x12, // Push external string
-            pushints = 0x13, // Push external interpolated string: [expr count]
+            pushs = 0x12, // Push external string: [index]
+            pushints = 0x13, // Push external interpolated string: [index, expr count]
             pushbs = 0x14, // Push internal binary string: [ID]
             pushbints = 0x15, // Push internal binary interpolated string: [ID, expr count]
 
