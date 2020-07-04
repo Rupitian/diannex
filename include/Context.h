@@ -9,6 +9,7 @@
 #include <variant>
 
 #include "Instruction.h"
+#include "Project.h"
 
 namespace diannex
 {
@@ -39,7 +40,6 @@ namespace diannex
         std::unordered_map<std::string, std::pair<std::variant<int, std::string>, int>> definitionBytecode;
         std::vector<Instruction> bytecode;
         std::vector<std::string> internalStrings;
-        std::vector<std::string> symbolStrings;
         std::vector<std::string> symbolStack;
         std::vector<std::string> localStack;
         std::vector<int> localCountStack;

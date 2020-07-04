@@ -84,6 +84,11 @@ namespace diannex
         }
     }
 
+    void BinaryWriter::WriteBytes(const char* buff, int size)
+    {
+        Write(buff, size);
+    }
+
     BinaryFileWriter::BinaryFileWriter(std::string filePath)
         : BinaryWriter()
     {

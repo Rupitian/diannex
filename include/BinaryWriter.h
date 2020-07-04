@@ -32,6 +32,7 @@ namespace diannex
         void WriteDouble(double value);
 
         void WriteString(std::string value);
+        void WriteBytes(const char* buff, int size);
 
         template<class T>
         void WriteList(const std::vector<T>& list)
@@ -61,4 +62,4 @@ namespace diannex
     };
 }
 
-#endif
+#endif // DIANNEX_BINARY_WRITER_H
