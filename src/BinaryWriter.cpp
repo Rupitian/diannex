@@ -73,7 +73,7 @@ namespace diannex
 
     void BinaryWriter::WriteString(std::string value)
     {
-        if (value[value.size() - 1] != '\0')
+        if (value.size() == 0 || value[value.size() - 1] != '\0')
         {
             value.push_back('\0');
         }
@@ -143,6 +143,68 @@ namespace diannex
             }
         }
         return (int)fwrite(ptr, size, 1, fd);
+    }
+
+    BinaryMemoryWriter::BinaryMemoryWriter()
+        : BinaryWriter(), size(0), realBufferSize(1024 * 32)
+    {
+        buf.resize(1024 * 32); // 32kb memory blocks
+    }
+
+    const char* BinaryMemoryWriter::GetBuffer()
+    {
+        return (const char*)&buf[0];
+    }
+
+    uint32_t BinaryMemoryWriter::GetSize()
+    {
+        return size;
+    }
+
+    int BinaryMemoryWriter::Write(const void* ptr, size_t size)
+    {
+        if (this->size + size > realBufferSize)
+        {
+            realBufferSize += 1024 * 32;
+            buf.resize(realBufferSize);
+        }
+
+        if (this->endian == BIG_ENDIAN)
+        {
+            switch (size)
+            {
+            case 1:
+                memcpy(&buf[this->size], ptr, size);
+                break;
+            case 2:
+            {
+                uint16_t res = *((uint16_t*)ptr);
+                res = swapbits(res);
+                memcpy(&buf[this->size], &res, size);
+                break;
+            }
+            case 4:
+            {
+                uint32_t res = *((uint32_t*)ptr);
+                res = swapbits(res);
+                memcpy(&buf[this->size], &res, size);
+                break;
+            }
+            case 8:
+            {
+                uint64_t res = *((uint32_t*)ptr);
+                res = swapbits(res);
+                memcpy(&buf[this->size], &res, size);
+                break;
+            }
+            default:
+                memcpy(&buf[this->size], ptr, size);
+                break;
+            }
+        } else
+            memcpy(&buf[this->size], ptr, size);
+        this->size += size;
+        return size;
     }
 }
 

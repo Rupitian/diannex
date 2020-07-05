@@ -13,6 +13,7 @@
 #include "Project.h"
 #include "Utility.h"
 #include "Context.h"
+#include "Binary.h"
 
 using namespace diannex;
 namespace fs = std::filesystem;
@@ -249,7 +250,11 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    // TODO write binary
+    // TODO write to proper path
+    {
+        BinaryFileWriter bw("test.dxb");
+        Binary::Write(&bw, &context);
+    }
 
     // TODO write translation files
 

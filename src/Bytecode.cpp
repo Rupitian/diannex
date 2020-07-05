@@ -60,14 +60,6 @@ namespace diannex
         ctx->bytecode.at(ind).arg = targ - ind;
     }
 
-    static int string(std::string str, CompileContext* ctx)
-    {
-        int res = std::find(ctx->internalStrings.begin(), ctx->internalStrings.end(), str) - ctx->internalStrings.begin();
-        if (res == ctx->internalStrings.size())
-            ctx->internalStrings.push_back(str);
-        return res;
-    }
-
     static void pushLocalContext(CompileContext* ctx)
     {
         ctx->localCountStack.push_back(0);
@@ -257,7 +249,7 @@ namespace diannex
             if (it == ctx->localStack.end())
             {
                 localId = -1;
-                ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushvarglb, string(var->content, ctx)));
+                ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushvarglb, ctx->string(var->content)));
             }
             else
             {
@@ -282,7 +274,7 @@ namespace diannex
                 ctx->bytecode.emplace_back(Instruction::Opcode::setarrind);
 
             if (localId == -1)
-                ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::setvarglb, string(var->content, ctx)));
+                ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::setvarglb, ctx->string(var->content)));
             else
                 ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::setvarloc, localId));
             break;
@@ -316,7 +308,7 @@ namespace diannex
                 if (arr || notEquals)
                 {
                     if (localId == -1)
-                        ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushvarglb, string(var->content, ctx)));
+                        ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushvarglb, ctx->string(var->content)));
                     else
                         ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushvarloc, localId));
 
@@ -374,7 +366,7 @@ namespace diannex
                 }
 
                 if (localId == -1)
-                    ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::setvarglb, string(var->content, ctx)));
+                    ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::setvarglb, ctx->string(var->content)));
                 else
                     ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::setvarloc, localId));
             }
@@ -389,12 +381,12 @@ namespace diannex
             case TokenType::ExcludeString:
             case TokenType::Identifier:
                 if (sc->nodes.size() == 1)
-                    ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushbs, string(sc->token.content, ctx)));
+                    ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushbs, ctx->string(sc->token.content)));
                 else
                 {
                     for (int i = sc->nodes.size() - 1; i > 0; i--)
                         GenerateExpression(sc->nodes.at(i), ctx, res);
-                    ctx->bytecode.push_back(Instruction::make_int2(Instruction::Opcode::pushbints, string(sc->token.content, ctx), sc->nodes.size()));
+                    ctx->bytecode.push_back(Instruction::make_int2(Instruction::Opcode::pushbints, ctx->string(sc->token.content), sc->nodes.size()));
                 }
                 break;
             case TokenType::MarkedString:
@@ -410,7 +402,7 @@ namespace diannex
                 }
                 break;
             }
-            ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::PATCH_CALL, string("char", ctx)));
+            ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::PATCH_CALL, ctx->string("char")));
             ctx->bytecode.emplace_back(Instruction::Opcode::pop);
             pushLocalContext(ctx);
             GenerateSceneStatement(sc->nodes.at(0), ctx, res);
@@ -421,7 +413,7 @@ namespace diannex
         {
             for (auto it = statement->nodes.rbegin(); it != statement->nodes.rend(); ++it)
                 GenerateExpression(*it, ctx, res);
-            ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::PATCH_CALL, string(((NodeContent*)statement)->content, ctx)));
+            ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::PATCH_CALL, ctx->string(((NodeContent*)statement)->content)));
             ctx->bytecode.emplace_back(Instruction::Opcode::pop);
             break;
         }
@@ -432,12 +424,12 @@ namespace diannex
             if (tr->excludeTranslation)
             {
                 if (tr->nodes.size() == 0)
-                    ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushbs, string(tr->content, ctx)));
+                    ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushbs, ctx->string(tr->content)));
                 else
                 {
                     for (auto it = tr->nodes.rbegin(); it != tr->nodes.rend(); ++it)
                         GenerateExpression(*it, ctx, res);
-                    ctx->bytecode.push_back(Instruction::make_int2(Instruction::Opcode::pushbints, string(tr->content, ctx), tr->nodes.size()));
+                    ctx->bytecode.push_back(Instruction::make_int2(Instruction::Opcode::pushbints, ctx->string(tr->content), tr->nodes.size()));
                 }
             }
             else
@@ -933,12 +925,12 @@ namespace diannex
             case TokenType::String: // todo: add default setting to project file?
             case TokenType::ExcludeString:
                 if (constant->nodes.size() == 0)
-                    ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushbs, string(constant->token.content, ctx)));
+                    ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushbs, ctx->string(constant->token.content)));
                 else
                 {
                     for (auto it = constant->nodes.rbegin(); it != constant->nodes.rend(); ++it)
                         GenerateExpression(*it, ctx, res);
-                    ctx->bytecode.push_back(Instruction::make_int2(Instruction::Opcode::pushbints, string(constant->token.content, ctx), constant->nodes.size()));
+                    ctx->bytecode.push_back(Instruction::make_int2(Instruction::Opcode::pushbints, ctx->string(constant->token.content), constant->nodes.size()));
                 }
                 break;
             case TokenType::MarkedString:
@@ -986,7 +978,7 @@ namespace diannex
             NodeContent* var = (NodeContent*)expr;
             auto it = std::find(ctx->localStack.begin(), ctx->localStack.end(), var->content);
             if (it == ctx->localStack.end())
-                ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushvarglb, string(var->content, ctx)));
+                ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushvarglb, ctx->string(var->content)));
             else
                 ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushvarloc, std::distance(ctx->localStack.begin(), it)));
 
@@ -1007,7 +999,7 @@ namespace diannex
             if (it == ctx->localStack.end())
             {
                 localId = -1;
-                ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushvarglb, string(var->content, ctx)));
+                ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushvarglb, ctx->string(var->content)));
             }
             else
             {
@@ -1035,7 +1027,7 @@ namespace diannex
                 ctx->bytecode.emplace_back(Instruction::Opcode::setarrind);
 
             if (localId == -1)
-                ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::setvarglb, string(var->content, ctx)));
+                ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::setvarglb, ctx->string(var->content)));
             else
                 ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::setvarloc, localId));
 
@@ -1052,7 +1044,7 @@ namespace diannex
             if (it == ctx->localStack.end())
             {
                 localId = -1;
-                ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushvarglb, string(var->content, ctx)));
+                ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushvarglb, ctx->string(var->content)));
             }
             else
             {
@@ -1081,7 +1073,7 @@ namespace diannex
                 ctx->bytecode.emplace_back(Instruction::Opcode::setarrind);
 
             if (localId == -1)
-                ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::setvarglb, string(var->content, ctx)));
+                ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::setvarglb, ctx->string(var->content)));
             else
                 ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::setvarloc, localId));
 
@@ -1103,7 +1095,7 @@ namespace diannex
         {
             for (auto it = expr->nodes.rbegin(); it != expr->nodes.rend(); ++it)
                 GenerateExpression(*it, ctx, res);
-            ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::PATCH_CALL, string(((NodeContent*)expr)->content, ctx)));
+            ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::PATCH_CALL, ctx->string(((NodeContent*)expr)->content)));
             break;
         }
         }

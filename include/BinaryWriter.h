@@ -60,6 +60,20 @@ namespace diannex
         bool canWrite;
         virtual int Write(const void* ptr, size_t size);
     };
+
+    class BinaryMemoryWriter : public BinaryWriter
+    {
+    public:
+        BinaryMemoryWriter();
+
+        uint32_t GetSize();
+        const char* GetBuffer();
+    private:
+        uint32_t size;
+        uint32_t realBufferSize;
+        std::vector<uint8_t> buf;
+        virtual int Write(const void* ptr, size_t size);
+    };
 }
 
 #endif // DIANNEX_BINARY_WRITER_H
