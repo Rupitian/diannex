@@ -93,7 +93,6 @@ namespace diannex
         : BinaryWriter()
     {
         fd = fopen(filePath.c_str(), "wb");
-        // TODO: Log error upon failure to open file
         if (fd == NULL)
             canWrite = false;
         else

@@ -34,7 +34,7 @@ namespace diannex
             setvarglb = 0x19, // Set a global variable from the stack: [string name]
             setvarloc = 0x1A, // Set a local variable from the stack: [ID]
             pushvarglb = 0x1B, // Pushes a global variable to the stack: [string name]
-            pushvarloc = 0x1C, // Pushes a local variable to the stack: [ID]
+            pushvarloc = 0x1C, // Pushes a local variable to the stack: [ID] (if it doesn't exist, error)
 
             pop = 0x1D, // Discards the value on the top of the stack
             dup = 0x1E, // Duplicates the value on the top of the stack
@@ -131,7 +131,29 @@ namespace diannex
             bw->WriteUInt8(opcode);
             switch (opcode)
             {
-                // todo
+            case Opcode::freeloc:
+            case Opcode::pushi:
+            case Opcode::pushs:
+            case Opcode::pushints:
+            case Opcode::pushbs:
+            case Opcode::pushbints:
+            case Opcode::j:
+            case Opcode::jt:
+            case Opcode::jf:
+            case Opcode::choiceadd:
+            case Opcode::choiceaddt:
+            case Opcode::chooseadd:
+            case Opcode::chooseaddt:
+                bw->WriteInt32(arg);
+                break;
+            case Opcode::call:
+            case Opcode::callext:
+                bw->WriteInt32(arg);
+                bw->WriteInt32(arg2);
+                break;
+            case Opcode::pushd:
+                bw->WriteDouble(argDouble);
+                break;
             }
         }
     };

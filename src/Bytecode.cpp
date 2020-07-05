@@ -402,7 +402,7 @@ namespace diannex
                 }
                 break;
             }
-            ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::PATCH_CALL, ctx->string("char")));
+            ctx->bytecode.push_back(Instruction::make_int2(Instruction::Opcode::PATCH_CALL, ctx->string("char"), 1));
             ctx->bytecode.emplace_back(Instruction::Opcode::pop);
             pushLocalContext(ctx);
             GenerateSceneStatement(sc->nodes.at(0), ctx, res);
@@ -413,7 +413,7 @@ namespace diannex
         {
             for (auto it = statement->nodes.rbegin(); it != statement->nodes.rend(); ++it)
                 GenerateExpression(*it, ctx, res);
-            ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::PATCH_CALL, ctx->string(((NodeContent*)statement)->content)));
+            ctx->bytecode.push_back(Instruction::make_int2(Instruction::Opcode::PATCH_CALL, ctx->string(((NodeContent*)statement)->content), statement->nodes.size()));
             ctx->bytecode.emplace_back(Instruction::Opcode::pop);
             break;
         }
@@ -1095,7 +1095,7 @@ namespace diannex
         {
             for (auto it = expr->nodes.rbegin(); it != expr->nodes.rend(); ++it)
                 GenerateExpression(*it, ctx, res);
-            ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::PATCH_CALL, ctx->string(((NodeContent*)expr)->content)));
+            ctx->bytecode.push_back(Instruction::make_int2(Instruction::Opcode::PATCH_CALL, ctx->string(((NodeContent*)expr)->content), expr->nodes.size()));
             break;
         }
         }

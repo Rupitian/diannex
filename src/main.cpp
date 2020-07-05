@@ -253,7 +253,16 @@ int main(int argc, char** argv)
     // TODO write to proper path
     {
         BinaryFileWriter bw("test.dxb");
-        Binary::Write(&bw, &context);
+        if (!bw.CanWrite())
+        {
+            std::cout << std::endl << rang::fgB::red << "Failed to open output binary file for writing!" << rang::fg::reset << std::endl;
+            return 1;
+        }
+        if (!Binary::Write(&bw, &context))
+        {
+            std::cout << std::endl << rang::fgB::red << "Failed to compress with zlib!" << rang::fg::reset << std::endl;
+            return 1;
+        }
     }
 
     // TODO write translation files

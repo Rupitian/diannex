@@ -1,17 +1,29 @@
 #include "Binary.h"
 
+#include <algorithm>
+#include <random>
+#include <libs/miniz/miniz.h>
+
 namespace diannex
 {
-    void Binary::Write(BinaryWriter* bw, CompileContext* ctx)
+    uint32_t Binary::Compress(const char* srcBuff, uint32_t srcSize, std::vector<uint8_t>& out)
+    {
+        uLong outSize = compressBound(srcSize);
+        out.resize(outSize);
+        if (compress(&out[0], &outSize, (const unsigned char*)srcBuff, srcSize) != Z_OK)
+            return 0;
+        return outSize;
+    }
+
+    bool Binary::Write(BinaryWriter* bw, CompileContext* ctx)
     {
         bw->WriteBytes("DNX", 3);
         bw->WriteUInt8(0); // Version
 
         // Flags
         bool compressed = false, // TODO retrieve values from project options,
-             shuffle = false,    // and implement cases other than these in this function
-             internalTranslationFile = true;
-        bw->WriteUInt8((uint8_t)compressed | ((uint8_t)shuffle << 1) | ((uint8_t)internalTranslationFile << 2)); // Version
+             internalTranslationFile = true; // and implement cases other than these in this function
+        bw->WriteUInt8((uint8_t)compressed | ((uint8_t)internalTranslationFile << 1));
 
         BinaryMemoryWriter bmw;
 
@@ -45,7 +57,22 @@ namespace diannex
         }
 
         // Bytecode
-        bmw.WriteList(ctx->bytecode);
+        bmw.WriteUInt32(ctx->bytecode.size());
+        for (auto it = ctx->bytecode.begin(); it != ctx->bytecode.end(); ++it)
+        {
+            if (it->opcode == Instruction::Opcode::PATCH_CALL)
+            {
+                auto func = ctx->functionBytecode.find(ctx->internalStrings.at(it->arg));
+                if (func != ctx->functionBytecode.end())
+                {
+                    it->opcode = Instruction::Opcode::call;
+                    it->arg = std::distance(ctx->functionBytecode.begin(), func);
+                }
+                else
+                    it->opcode = Instruction::Opcode::callext;
+            }
+            it->Serialize(&bmw);
+        }
 
         // Internal string table
         bmw.WriteUInt32(ctx->internalStrings.size());
@@ -58,7 +85,21 @@ namespace diannex
             bmw.WriteString(it->text);
 
         uint32_t size = bmw.GetSize();
-        bw->WriteUInt32(size);
-        bw->WriteBytes(bmw.GetBuffer(), size);
+        if (compressed)
+        {
+            std::vector<uint8_t> out;
+            uint32_t compSize = Compress(bmw.GetBuffer(), size, out);
+            if (compSize == 0)
+                return false;
+            bw->WriteUInt32(compSize);
+            bw->WriteBytes((const char*)&out[0], compSize);
+        }
+        else
+        {
+            bw->WriteUInt32(size);
+            bw->WriteBytes(bmw.GetBuffer(), size);
+        }
+
+        return true;
     }
 }

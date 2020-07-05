@@ -10,7 +10,8 @@ namespace diannex
     class Binary
     {
     public:
-        static void Write(BinaryWriter* bw, CompileContext* ctx);
+        static uint32_t Compress(const char* srcBuff, uint32_t srcSize, std::vector<uint8_t>& out);
+        static bool Write(BinaryWriter* bw, CompileContext* ctx);
     private:
         Binary();
     };
