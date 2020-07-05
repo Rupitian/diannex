@@ -31,7 +31,10 @@ namespace diannex
         bmw.WriteUInt32(ctx->sceneBytecode.size());
         for (auto it = ctx->sceneBytecode.begin(); it != ctx->sceneBytecode.end(); ++it)
         {
+            // Symbol
             bmw.WriteUInt32(ctx->string(it->first));
+
+            // Bytecode index
             bmw.WriteInt32(it->second);
         }
 
@@ -39,7 +42,10 @@ namespace diannex
         bmw.WriteUInt32(ctx->functionBytecode.size());
         for (auto it = ctx->functionBytecode.begin(); it != ctx->functionBytecode.end(); ++it)
         {
+            // Symbol
             bmw.WriteUInt32(ctx->string(it->first));
+
+            // Bytecode index
             bmw.WriteInt32(it->second);
         }
 
@@ -47,12 +53,18 @@ namespace diannex
         bmw.WriteUInt32(ctx->definitionBytecode.size());
         for (auto it = ctx->definitionBytecode.begin(); it != ctx->definitionBytecode.end(); ++it)
         {
+            // Symbol
             bmw.WriteUInt32(ctx->string(it->first));
+
             auto p = it->second;
-            if (p.first.index() == 0)
+
+            // String reference
+            if (std::holds_alternative<int>(p.first))
                 bmw.WriteUInt32(std::get<int>(p.first));
             else
                 bmw.WriteUInt32(ctx->string(std::get<std::string>(p.first)) | (1 << 31));
+
+            // Bytecode index
             bmw.WriteInt32(p.second);
         }
 
