@@ -32,7 +32,7 @@ namespace diannex
         for (auto it = ctx->sceneBytecode.begin(); it != ctx->sceneBytecode.end(); ++it)
         {
             bmw.WriteUInt32(ctx->string(it->first));
-            bmw.WriteUInt32(it->second);
+            bmw.WriteInt32(it->second);
         }
 
         // Function metadata
@@ -40,7 +40,7 @@ namespace diannex
         for (auto it = ctx->functionBytecode.begin(); it != ctx->functionBytecode.end(); ++it)
         {
             bmw.WriteUInt32(ctx->string(it->first));
-            bmw.WriteUInt32(it->second);
+            bmw.WriteInt32(it->second);
         }
 
         // Definition metadata
