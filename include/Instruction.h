@@ -137,6 +137,10 @@ namespace diannex
             case Opcode::pushints:
             case Opcode::pushbs:
             case Opcode::pushbints:
+            case Opcode::setvarglb:
+            case Opcode::setvarloc:
+            case Opcode::pushvarglb:
+            case Opcode::pushvarloc:
             case Opcode::j:
             case Opcode::jt:
             case Opcode::jf:
