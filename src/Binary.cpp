@@ -53,7 +53,7 @@ namespace diannex
                 bmw.WriteUInt32(std::get<int>(p.first));
             else
                 bmw.WriteUInt32(ctx->string(std::get<std::string>(p.first)) | (1 << 31));
-            bmw.WriteUInt32(p.second);
+            bmw.WriteInt32(p.second);
         }
 
         // Bytecode
