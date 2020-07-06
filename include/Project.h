@@ -24,12 +24,22 @@ namespace diannex
         // Flags to set for interpolation. default: <see ProjectInterpolationFlags>
         ProjectInterpolationFlags interpolationFlags;
 
-        // Directory to output translation files. default: './translations'
-        // If empty, translation files not generated (and are internal)
-        std::string translationOutput;
+        // Directory to output the binary. default: './out'
+        // If using public translation files, they'll be output
+        // to this directory as well
+        std::string binaryOutputDir;
 
         // Whether to output a private translation file with the public one
         bool translationPrivate;
+
+        // Directory to output private translation files, if used. default: './translations'
+        std::string translationPrivateOutDir;
+
+        // Whether to output public translation files. default: false
+        bool translationPublic;
+
+        // Whether or not to compress the binary using zlib. default: true
+        bool compression;
 
         // Predefined macros/defines to be used in source files. default: None
         std::unordered_map<std::string, std::string> macros;

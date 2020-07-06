@@ -117,7 +117,11 @@ namespace diannex
         {
             proj.options.files.emplace_back("main.dx");
             proj.options.interpolationFlags.symbol = "$";
-            proj.options.translationOutput = "./translations";
+            proj.options.binaryOutputDir = "./out";
+            proj.options.translationPrivate = false;
+            proj.options.translationPrivateOutDir = "./translations";
+            proj.options.translationPublic = false;
+            proj.options.compression = true;
             return;
         }
 
@@ -141,13 +145,25 @@ namespace diannex
                                                  project["options"]["interpolation_flags"]["symbol"].get<std::string>() :
                                                  "$";
 
-        proj.options.translationOutput = project["options"].contains("translation_output") ?
-                                         project["options"]["translation_output"].get<std::string>() :
-                                         "./translations";
+        proj.options.binaryOutputDir = project["options"].contains("binary_outdir") ?
+                                       project["options"]["binary_outdir"].get<std::string>() :
+                                       "./out";
 
         proj.options.translationPrivate = project["options"].contains("translation_private") ?
                                           project["options"]["translation_private"].get<bool>() :
                                           false;
+
+        proj.options.translationPrivateOutDir = project["options"].contains("translation_private_outdir") ?
+                                                project["options"]["translation_private_outdir"].get<std::string>() :
+                                                "./translations";
+
+        proj.options.translationPublic = project["options"].contains("translation_public") ?
+                                         project["options"]["translation_private_outdir"].get<bool>() :
+                                         false;
+
+        proj.options.compression = project["options"].contains("compression") ?
+                                   project["options"]["compression"].get<bool>() :
+                                   true;
 
         if (project["options"].contains("macros"))
         {
