@@ -50,10 +50,14 @@ int main(int argc, char** argv)
     options
         .add_options("Project Settings")
             ("b,binary", "Directory to output binary", cxxopts::value<std::string>()->default_value("./out"))
-            ("t,public", "Whether to output public translation files", cxxopts::value<bool>()->default_value("false"))
-            ("T,private", "Whether to output private translation files", cxxopts::value<bool>()->default_value("false"))
+            ("t,public", "Whether to output public translation files")
+            ("T,private", "Whether to output private translation files")
             ("d,privdir", "Directory to output private translation files", cxxopts::value<std::string>()->default_value("./translations"))
-            ("C,compression", "Whether or not to use compression", cxxopts::value<bool>()->default_value("false"));
+            ("C,compress", "Whether or not to use compression", cxxopts::value<bool>()->default_value("false"))
+            ("files", "Files to compile", cxxopts::value<std::vector<std::string>>());
+
+    options.parse_positional({ "files" });
+    options.positional_help("<files>");
 
     auto result = parse_options(argc, argv, options);
 
@@ -90,6 +94,7 @@ int main(int argc, char** argv)
     if (result.count("cli"))
     {
         project = ProjectFormat();
+        project.options.files = result["files"].as<std::vector<std::string>>();
         project.options.binaryOutputDir = result["binary"].as<std::string>();
         project.options.translationPublic = result["public"].count() == 1;
         project.options.translationPrivate = result["private"].count() == 1;
