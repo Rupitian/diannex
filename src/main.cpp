@@ -44,13 +44,29 @@ int main(int argc, char** argv)
         .add_options()
             ("p,project", "Load project file", cxxopts::value<std::string>())
             ("g,generate", "Generate new project file", cxxopts::value<std::string>()->implicit_value(fs::current_path().filename().string()))
+            ("c,cli", "Don't use a project file and read commands from cli")
             ("h,help", "Shows this message");
+
+    options
+        .add_options("Project Settings")
+            ("b,binary", "Directory to output binary", cxxopts::value<std::string>()->default_value("./out"))
+            ("t,public", "Whether to output public translation files")
+            ("T,private", "Whether to output private translation files")
+            ("d,privdir", "Directory to output private translation files", cxxopts::value<std::string>()->default_value("./translations"))
+            ("C,compression", "Whether or not to use compression", cxxopts::value<bool>()->default_value(false))
+        ;
 
     auto result = parse_options(argc, argv, options);
 
     if (result.count("project") && result.count("generate"))
     {
         std::cout << options.help() << "\nCan't define --project and --generate at the same time!" << std::endl;
+        return 1;
+    }
+
+    if (result.count("cli") && (result.count("project") || result.count("generate")))
+    {
+        std::cout << options.help() << "\n--cli can't be used in conjunction with --project or --generate!" << std::endl;
         return 1;
     }
 
@@ -69,6 +85,17 @@ int main(int argc, char** argv)
         baseDirectory = fs::absolute(projectFilePath).parent_path();
         load_project(projectFilePath, project);
         print_project(projectFilePath, project);
+        loaded = true;
+    }
+
+    if (result.count("cli"))
+    {
+        project = ProjectFormat();
+        project.options.binaryOutputDir = result["binary"].as<std::string>();
+        project.options.translationPublic = result["public"].count() == 1;
+        project.options.translationPrivate = result["private"].count() == 1;
+        project.options.translationPrivateOutDir = result["privdir"].as<std::string>();
+        project.options.compression = result["compression"].as<bool>();
         loaded = true;
     }
 
