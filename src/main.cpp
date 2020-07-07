@@ -22,7 +22,10 @@ cxxopts::ParseResult parse_options(int argc, char** argv, cxxopts::Options& opti
 {
     try
     {
-        return options.parse(argc, argv);
+        auto res = options.parse(argc, argv);
+        options.parse_positional({ "files" });
+        options.positional_help("<files>");
+        return res;
     }
     catch (const cxxopts::OptionException& e)
     {
@@ -55,9 +58,6 @@ int main(int argc, char** argv)
             ("d,privdir", "Directory to output private translation files", cxxopts::value<std::string>()->default_value("./translations"))
             ("C,compress", "Whether or not to use compression", cxxopts::value<bool>()->default_value("false"))
             ("files", "Files to compile", cxxopts::value<std::vector<std::string>>());
-
-    options.parse_positional({ "files" });
-    options.positional_help("<files>");
 
     auto result = parse_options(argc, argv, options);
 
@@ -99,7 +99,7 @@ int main(int argc, char** argv)
         project.options.translationPublic = result["public"].count() == 1;
         project.options.translationPrivate = result["private"].count() == 1;
         project.options.translationPrivateOutDir = result["privdir"].as<std::string>();
-        project.options.compression = result["compression"].as<bool>();
+        project.options.compression = result["compress"].as<bool>();
         loaded = true;
     }
 

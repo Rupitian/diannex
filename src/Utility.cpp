@@ -15,13 +15,14 @@ namespace diannex
     void print_project(const std::string& path, const ProjectFormat& project)
     {
         std::cout << path << ":"
-                  << "\n\tProject Name: " << project.name
-                  << "\n\tProject Authors: ";
+                  << std::endl << "\tProject Name: " << project.name
+                  << std::endl << "\tProject Authors: ";
         for (int i = 0; i < project.authors.size(); i++)
         {
             if (i != 0) std::cout << ", ";
             std::cout << project.authors[i];
         }
+        std::cout << std::endl << "\tMacros: ";
         bool comma = false;
         for (auto& macro : project.options.macros)
         {
