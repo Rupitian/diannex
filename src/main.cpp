@@ -23,8 +23,6 @@ cxxopts::ParseResult parse_options(int argc, char** argv, cxxopts::Options& opti
     try
     {
         auto res = options.parse(argc, argv);
-        options.parse_positional({ "files" });
-        options.positional_help("<files>");
         return res;
     }
     catch (const cxxopts::OptionException& e)
@@ -52,12 +50,16 @@ int main(int argc, char** argv)
 
     options
         .add_options("Project Settings")
-            ("b,binary", "Directory to output binary", cxxopts::value<std::string>()->default_value("./out"))
+            ("b,binary", "Directory to output binary", cxxopts::value<std::string>(), "(default: \"./out\")")
             ("t,public", "Whether to output public translation files")
             ("T,private", "Whether to output private translation files")
-            ("d,privdir", "Directory to output private translation files", cxxopts::value<std::string>()->default_value("./translations"))
-            ("C,compress", "Whether or not to use compression", cxxopts::value<bool>()->default_value("false"))
+            ("d,privdir", "Directory to output private translation files", cxxopts::value<std::string>(), "(default: \"./translations\")")
+            ("C,compress", "Whether or not to use compression")
             ("files", "Files to compile", cxxopts::value<std::vector<std::string>>());
+
+
+    options.parse_positional({ "files" });
+    options.positional_help("<files>");
 
     auto result = parse_options(argc, argv, options);
 
@@ -95,11 +97,15 @@ int main(int argc, char** argv)
     {
         project = ProjectFormat();
         project.options.files = result["files"].as<std::vector<std::string>>();
-        project.options.binaryOutputDir = result["binary"].as<std::string>();
+        for (auto& path : project.options.files)
+        {
+            path = fs::absolute(path).string();
+        }
+        project.options.binaryOutputDir = result["binary"].count() == 1 ? result["binary"].as<std::string>() : "./out";
         project.options.translationPublic = result["public"].count() == 1;
         project.options.translationPrivate = result["private"].count() == 1;
-        project.options.translationPrivateOutDir = result["privdir"].as<std::string>();
-        project.options.compression = result["compress"].as<bool>();
+        project.options.translationPrivateOutDir = result["privdir"].count() == 1 ? result["privdir"].as<std::string>() : "./translations";
+        project.options.compression = result["compress"].count() == 1;
         loaded = true;
     }
 
