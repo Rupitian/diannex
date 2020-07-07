@@ -50,11 +50,10 @@ int main(int argc, char** argv)
     options
         .add_options("Project Settings")
             ("b,binary", "Directory to output binary", cxxopts::value<std::string>()->default_value("./out"))
-            ("t,public", "Whether to output public translation files")
-            ("T,private", "Whether to output private translation files")
+            ("t,public", "Whether to output public translation files", cxxopts::value<bool>()->default_value("false"))
+            ("T,private", "Whether to output private translation files", cxxopts::value<bool>()->default_value("false"))
             ("d,privdir", "Directory to output private translation files", cxxopts::value<std::string>()->default_value("./translations"))
-            ("C,compression", "Whether or not to use compression", cxxopts::value<bool>()->default_value(false))
-        ;
+            ("C,compression", "Whether or not to use compression", cxxopts::value<bool>()->default_value("false"));
 
     auto result = parse_options(argc, argv, options);
 
