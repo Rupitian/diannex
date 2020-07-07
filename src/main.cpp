@@ -33,6 +33,11 @@ cxxopts::ParseResult parse_options(int argc, char** argv, cxxopts::Options& opti
     }
 }
 
+void help(cxxopts::Options& options)
+{
+    std::cout << options.help() << "  --files                       File(s) to compile" << std::endl;
+}
+
 int main(int argc, char** argv)
 {
     ProjectFormat project;
@@ -55,7 +60,7 @@ int main(int argc, char** argv)
             ("T,private", "Whether to output private translation files")
             ("d,privdir", "Directory to output private translation files", cxxopts::value<std::string>(), "(default: \"./translations\")")
             ("C,compress", "Whether or not to use compression")
-            ("files", "Files to compile", cxxopts::value<std::vector<std::string>>()->default_value(""));
+            ("files", "File(s) to compile", cxxopts::value<std::vector<std::string>>()->default_value(""));
 
 
     options.parse_positional({ "files" });
@@ -65,13 +70,15 @@ int main(int argc, char** argv)
 
     if (result.count("project") && result.count("generate"))
     {
-        std::cout << options.help() << "\nCan't define --project and --generate at the same time!" << std::endl;
+        help(options);
+        std::cout << "\nCan't define --project and --generate at the same time!" << std::endl;
         return 1;
     }
 
     if (result.count("cli") && (result.count("project") || result.count("generate")))
     {
-        std::cout << options.help() << "\n--cli can't be used in conjunction with --project or --generate!" << std::endl;
+        help(options);
+        std::cout << "\n--cli can't be used in conjunction with --project or --generate!" << std::endl;
         return 1;
     }
 
@@ -128,7 +135,7 @@ int main(int argc, char** argv)
 
     if (!loaded)
     {
-        std::cout << options.help() << std::endl;
+        help(options);
         return 0;
     }
 
