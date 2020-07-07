@@ -29,7 +29,7 @@ namespace diannex
         // to this directory as well
         std::string binaryOutputDir;
 
-        // Whether to output a private translation file with the public one
+        // Whether to output a private translation file with the public one. default: false
         bool translationPrivate;
 
         // Directory to output private translation files, if used. default: './translations'

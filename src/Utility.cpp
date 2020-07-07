@@ -16,26 +16,12 @@ namespace diannex
     {
         std::cout << path << ":"
                   << "\n\tProject Name: " << project.name
-                  << "\n\tProject Authors: [ ";
+                  << "\n\tProject Authors: ";
         for (int i = 0; i < project.authors.size(); i++)
         {
             if (i != 0) std::cout << ", ";
             std::cout << project.authors[i];
         }
-        std::cout << " ]"
-                  << "\n\tProject Options:"
-                  << "\n\t\tCompile Finish Message: " << project.options.compileFinishMessage
-                  << "\n\t\tFiles: [ ";
-        for (int i = 0; i < project.options.files.size(); i++)
-        {
-            if (i != 0) std::cout << ", ";
-            std::cout << project.options.files[i];
-        }
-        std::cout << " ]"
-                  << "\n\t\tInterpolation Flags:"
-                  << "\n\t\t\tSymbol: " << project.options.interpolationFlags.symbol
-                  << "\n\t\tTranslation Output: " << project.options.translationOutput
-                  << "\n\t\tMacros: [ ";
         bool comma = false;
         for (auto& macro : project.options.macros)
         {
@@ -60,8 +46,11 @@ namespace diannex
                                  {"interpolation_flags", {
                                                                  {"symbol", "$"}
                                                          }},
-                                 {"translation_output", "./translations"},
+                                 {"binary_outdir", "./out"},
                                  {"translation_private", false},
+                                 {"translation_private_outdir", "./translations"},
+                                 {"translation_public", false},
+                                 {"compression", true},
                                  {"macros", nlohmann::json::array()}
                          }}
         };
@@ -158,7 +147,7 @@ namespace diannex
                                                 "./translations";
 
         proj.options.translationPublic = project["options"].contains("translation_public") ?
-                                         project["options"]["translation_private_outdir"].get<bool>() :
+                                         project["options"]["translation_public"].get<bool>() :
                                          false;
 
         proj.options.compression = project["options"].contains("compression") ?

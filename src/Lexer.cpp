@@ -856,7 +856,10 @@ namespace diannex
                 }
                 else if (t.keywordType == KeywordType::EndIf)
                 {
-                    out.emplace_back(TokenType::Error, t.line, t.column, "Trailing #endif");
+                    if (cr.stack > 0)
+                        cr.stack--;
+                    else
+                        out.emplace_back(TokenType::Error, t.line, t.column, "Trailing #endif");
                 }
             }
         }

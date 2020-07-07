@@ -19,15 +19,8 @@ namespace diannex
     static int translationInfo(CompileContext* ctx, std::string text, bool isComment = false)
     {
         int res = ctx->translationStringIndex;
-        if (ctx->project->options.translationOutput.empty())
-        {
-            if (!isComment)
-            {
-                ctx->translationInfo.push_back({ "", false, text });
-                ctx->translationStringIndex++;
-            }
-        }
-        else if (ctx->project->options.translationPrivate)
+        if (ctx->project->options.translationPrivate &&
+                !ctx->project->options.translationPrivateOutDir.empty())
         {
             if (!isComment)
             {
