@@ -106,6 +106,7 @@ namespace diannex
             uint32_t compSize = Compress(bmw.GetBuffer(), size, out);
             if (compSize == 0)
                 return false;
+            bw->WriteUInt32(size);
             bw->WriteUInt32(compSize);
             bw->WriteBytes((const char*)&out[0], compSize);
         }
