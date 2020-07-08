@@ -597,14 +597,13 @@ namespace diannex
                     Token next = parser->peekToken();
                     switch (next.type)
                     {
+                    case TokenType::MarkedString:
+                        parser->errors.push_back({ ParseError::ErrorType::UnexpectedMarkedString, next.line, next.column });
                     case TokenType::String:
                     case TokenType::ExcludeString:
-                    case TokenType::MarkedString:
                     {
-                        if (t.type == TokenType::MarkedString)
-                            parser->errors.push_back({ ParseError::ErrorType::UnexpectedMarkedString, t.line, t.column });
                         NodeText* text = new NodeText(next.content, next.type == TokenType::ExcludeString);
-                        text->content = Parser::ProcessStringInterpolation(parser, t, t.content, &text->nodes);
+                        text->content = Parser::ProcessStringInterpolation(parser, next, next.content, &text->nodes);
                         res->nodes.push_back(text);
                         parser->advance();
                         parser->skipNewlines();

@@ -14,6 +14,7 @@
 #include "Utility.h"
 #include "Context.h"
 #include "Binary.h"
+#include "Translation.h"
 
 using namespace diannex;
 namespace fs = std::filesystem;
@@ -339,7 +340,18 @@ int main(int argc, char** argv)
     if (context.project->options.translationPublic)
     {
         const std::string pubFileName = (project.options.translationPublicName.empty() ? binaryName : project.options.translationPublicName) + ".dxt";
-        // TODO
+        std::ofstream s;
+        s.open((mainOutput / pubFileName).string());
+        if (s.is_open())
+        {
+            // TODO
+        }
+        else
+        {
+            std::cout << std::endl << rang::fgB::red << "Failed to open output translation file for writing!\nMake sure that all proper directories exist." << rang::fg::reset << std::endl;
+            return 1;
+        }
+        s.close();
     }
 
     auto stop = std::chrono::high_resolution_clock::now();
