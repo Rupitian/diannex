@@ -15,14 +15,14 @@ namespace diannex
     void print_project(const std::string& path, const ProjectFormat& project)
     {
         std::cout << path << ":"
-                  << std::endl << "\tProject Name: " << project.name
-                  << std::endl << "\tProject Authors: ";
+                  << "\n\tProject Name: " << project.name
+                  << "\n\tProject Authors: ";
         for (int i = 0; i < project.authors.size(); i++)
         {
             if (i != 0) std::cout << ", ";
             std::cout << project.authors[i];
         }
-        std::cout << std::endl << "\tMacros: ";
+        std::cout << "\n\tMacros: [ ";
         bool comma = false;
         for (auto& macro : project.options.macros)
         {
@@ -47,9 +47,10 @@ namespace diannex
                                  {"interpolation_flags", {
                                                                  {"symbol", "$"}
                                                          }},
-                                 {"binary_outdir", "./out"},
+                                 {"binary_outdir", "./out/"},
+                                 {"binary_name", ""},
                                  {"translation_private", false},
-                                 {"translation_private_outdir", "./translations"},
+                                 {"translation_private_outdir", "./translations/"},
                                  {"translation_public", false},
                                  {"compression", true},
                                  {"macros", nlohmann::json::array()}
@@ -107,9 +108,10 @@ namespace diannex
         {
             proj.options.files.emplace_back("main.dx");
             proj.options.interpolationFlags.symbol = "$";
-            proj.options.binaryOutputDir = "./out";
+            proj.options.binaryOutputDir = "./out/";
+            proj.options.binaryName = "out";
             proj.options.translationPrivate = false;
-            proj.options.translationPrivateOutDir = "./translations";
+            proj.options.translationPrivateOutDir = "./translations/";
             proj.options.translationPublic = false;
             proj.options.compression = true;
             return;
@@ -138,6 +140,10 @@ namespace diannex
         proj.options.binaryOutputDir = project["options"].contains("binary_outdir") ?
                                        project["options"]["binary_outdir"].get<std::string>() :
                                        "./out";
+
+        proj.options.binaryName = project["options"].contains("binary_name") ?
+                                  project["options"]["binary_name"].get<std::string>() :
+                                  "";
 
         proj.options.translationPrivate = project["options"].contains("translation_private") ?
                                           project["options"]["translation_private"].get<bool>() :

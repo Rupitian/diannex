@@ -56,6 +56,7 @@ int main(int argc, char** argv)
     options
         .add_options("Project Settings")
             ("b,binary", "Directory to output binary", cxxopts::value<std::string>(), "(default: \"./out\")")
+            ("n,name", "Name of output binary file", cxxopts::value<std::string>(), "(default: \"out\")")
             ("t,public", "Whether to output public translation files")
             ("T,private", "Whether to output private translation files")
             ("d,privdir", "Directory to output private translation files", cxxopts::value<std::string>(), "(default: \"./translations\")")
@@ -104,6 +105,8 @@ int main(int argc, char** argv)
 
         if (result["binary"].count())
             project.options.binaryOutputDir = result["binary"].as<std::string>();
+        if (result["name"].count())
+            project.options.binaryOutputDir = result["name"].as<std::string>();
         if (result["public"].count())
             project.options.translationPublic = result["public"].as<bool>();
         if (result["private"].count())
@@ -126,6 +129,7 @@ int main(int argc, char** argv)
             path = fs::absolute(path).string();
         }
         project.options.binaryOutputDir = result["binary"].count() == 1 ? result["binary"].as<std::string>() : "./out";
+        project.options.binaryName = result["name"].count() == 1 ? result["name"].as<std::string>() : "out";
         project.options.translationPublic = result["public"].count() == 1 ? result["public"].as<bool>() : false;
         project.options.translationPrivate = result["private"].count() == 1 ? result["private"].as<bool>() : false;
         project.options.translationPrivateOutDir = result["privdir"].count() == 1 ? result["privdir"].as<std::string>() : "./translations";
@@ -311,12 +315,14 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    // TODO write to proper path
+    // Write binary
+    const fs::path mainOutput = fs::absolute(project.options.binaryOutputDir);
+    const std::string fileName = (project.options.binaryName.empty() ? project.name : project.options.binaryName) + ".dxb";
     {
-        BinaryFileWriter bw("test.dxb");
+        BinaryFileWriter bw((mainOutput / fileName).string());
         if (!bw.CanWrite())
         {
-            std::cout << std::endl << rang::fgB::red << "Failed to open output binary file for writing!" << rang::fg::reset << std::endl;
+            std::cout << std::endl << rang::fgB::red << "Failed to open output binary file for writing!\nMake sure that all proper directories exist." << rang::fg::reset << std::endl;
             return 1;
         }
         if (!Binary::Write(&bw, &context))
@@ -326,7 +332,11 @@ int main(int argc, char** argv)
         }
     }
 
-    // TODO write translation files
+    // Write translation files
+    if (context.project->options.translationPublic)
+    {
+        // TODO
+    }
 
     auto stop = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);

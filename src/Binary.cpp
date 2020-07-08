@@ -21,8 +21,8 @@ namespace diannex
         bw->WriteUInt8(0); // Version
 
         // Flags
-        bool compressed = false, // TODO retrieve values from project options,
-             internalTranslationFile = true; // and implement cases other than these in this function
+        bool compressed = ctx->project->options.compression,
+             internalTranslationFile = !ctx->project->options.translationPublic;
         bw->WriteUInt8((uint8_t)compressed | ((uint8_t)internalTranslationFile << 1));
 
         BinaryMemoryWriter bmw;
@@ -92,9 +92,12 @@ namespace diannex
             bmw.WriteString(*it);
 
         // Internal translation file (if applicable)
-        bmw.WriteUInt32(ctx->translationInfo.size());
-        for (auto it = ctx->translationInfo.begin(); it != ctx->translationInfo.end(); ++it)
-            bmw.WriteString(it->text);
+        if (internalTranslationFile)
+        {
+            bmw.WriteUInt32(ctx->translationInfo.size());
+            for (auto it = ctx->translationInfo.begin(); it != ctx->translationInfo.end(); ++it)
+                bmw.WriteString(it->text);
+        }
 
         uint32_t size = bmw.GetSize();
         if (compressed)

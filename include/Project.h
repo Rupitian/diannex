@@ -24,15 +24,18 @@ namespace diannex
         // Flags to set for interpolation. default: <see ProjectInterpolationFlags>
         ProjectInterpolationFlags interpolationFlags;
 
-        // Directory to output the binary. default: './out'
+        // Directory to output the binary. default: './out/'
         // If using public translation files, they'll be output
         // to this directory as well
         std::string binaryOutputDir;
 
+        // Filename of the binary. default: project name
+        std::string binaryName;
+
         // Whether to output a private translation file with the public one. default: false
         bool translationPrivate;
 
-        // Directory to output private translation files, if used. default: './translations'
+        // Directory to output private translation files, if used. default: './translations/'
         std::string translationPrivateOutDir;
 
         // Whether to output public translation files. default: false
