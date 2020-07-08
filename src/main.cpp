@@ -319,6 +319,7 @@ int main(int argc, char** argv)
     }
 
     // Write binary
+    std::cout << "Writing binary..." << std::endl;
     const fs::path mainOutput = fs::absolute(project.options.binaryOutputDir);
     const std::string binaryName = (project.options.binaryName.empty() ? project.name : project.options.binaryName);
     const std::string fileName = binaryName + ".dxb";
@@ -339,12 +340,15 @@ int main(int argc, char** argv)
     // Write translation files
     if (context.project->options.translationPublic)
     {
+        std::cout << "Writing public translation file..." << std::endl;
+
         const std::string pubFileName = (project.options.translationPublicName.empty() ? binaryName : project.options.translationPublicName) + ".dxt";
+
         std::ofstream s;
-        s.open((mainOutput / pubFileName).string());
+        s.open((mainOutput / pubFileName).string(), std::ios_base::binary | std::ios_base::out | std::ios_base::trunc);
         if (s.is_open())
         {
-            // TODO
+            Translation::GeneratePublicFile(s, &context);
         }
         else
         {

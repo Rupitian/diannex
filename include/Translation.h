@@ -12,7 +12,8 @@ namespace diannex
     class Translation
     {
     public:
-        static bool GeneratePublicFile(std::ofstream& s, CompileContext* ctx);
+        static void GeneratePublicFile(std::ofstream& s, CompileContext* ctx);
+        static std::string SanitizeString(const std::string& str);
     private:
         Translation();
     };
