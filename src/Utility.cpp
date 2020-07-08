@@ -52,6 +52,7 @@ namespace diannex
                                  {"translation_private", false},
                                  {"translation_private_outdir", "./translations/"},
                                  {"translation_public", false},
+                                 {"translation_public_name", ""},
                                  {"compression", true},
                                  {"macros", nlohmann::json::array()}
                          }}
@@ -156,6 +157,10 @@ namespace diannex
         proj.options.translationPublic = project["options"].contains("translation_public") ?
                                          project["options"]["translation_public"].get<bool>() :
                                          false;
+
+        proj.options.translationPublicName = project["options"].contains("translation_public_name") ?
+                                             project["options"]["translation_public_name"].get<std::string>() :
+                                             "";
 
         proj.options.compression = project["options"].contains("compression") ?
                                    project["options"]["compression"].get<bool>() :

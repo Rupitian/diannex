@@ -57,7 +57,8 @@ int main(int argc, char** argv)
         .add_options("Project Settings")
             ("b,binary", "Directory to output binary", cxxopts::value<std::string>(), "(default: \"./out\")")
             ("n,name", "Name of output binary file", cxxopts::value<std::string>(), "(default: \"out\")")
-            ("t,public", "Whether to output public translation files")
+            ("t,public", "Whether to output public translation file")
+            ("N,pubname", "Name of output public translation file", cxxopts::value<std::string>(), "(default: \"out\")")
             ("T,private", "Whether to output private translation files")
             ("d,privdir", "Directory to output private translation files", cxxopts::value<std::string>(), "(default: \"./translations\")")
             ("C,compress", "Whether or not to use compression")
@@ -106,7 +107,7 @@ int main(int argc, char** argv)
         if (result["binary"].count())
             project.options.binaryOutputDir = result["binary"].as<std::string>();
         if (result["name"].count())
-            project.options.binaryOutputDir = result["name"].as<std::string>();
+            project.options.binaryName = result["name"].as<std::string>();
         if (result["public"].count())
             project.options.translationPublic = result["public"].as<bool>();
         if (result["private"].count())
@@ -131,6 +132,7 @@ int main(int argc, char** argv)
         project.options.binaryOutputDir = result["binary"].count() == 1 ? result["binary"].as<std::string>() : "./out";
         project.options.binaryName = result["name"].count() == 1 ? result["name"].as<std::string>() : "out";
         project.options.translationPublic = result["public"].count() == 1 ? result["public"].as<bool>() : false;
+        project.options.translationPublicName = result["pubname"].count() == 1 ? result["pubname"].as<std::string>() : "out";
         project.options.translationPrivate = result["private"].count() == 1 ? result["private"].as<bool>() : false;
         project.options.translationPrivateOutDir = result["privdir"].count() == 1 ? result["privdir"].as<std::string>() : "./translations";
         project.options.compression = result["compress"].count() == 1 ? result["compress"].as<bool>() : false;
@@ -317,7 +319,8 @@ int main(int argc, char** argv)
 
     // Write binary
     const fs::path mainOutput = fs::absolute(project.options.binaryOutputDir);
-    const std::string fileName = (project.options.binaryName.empty() ? project.name : project.options.binaryName) + ".dxb";
+    const std::string binaryName = (project.options.binaryName.empty() ? project.name : project.options.binaryName);
+    const std::string fileName = binaryName + ".dxb";
     {
         BinaryFileWriter bw((mainOutput / fileName).string());
         if (!bw.CanWrite())
@@ -335,6 +338,7 @@ int main(int argc, char** argv)
     // Write translation files
     if (context.project->options.translationPublic)
     {
+        const std::string pubFileName = (project.options.translationPublicName.empty() ? binaryName : project.options.translationPublicName) + ".dxt";
         // TODO
     }
 

@@ -134,9 +134,7 @@ namespace diannex
             case Opcode::freeloc:
             case Opcode::pushi:
             case Opcode::pushs:
-            case Opcode::pushints:
             case Opcode::pushbs:
-            case Opcode::pushbints:
             case Opcode::setvarglb:
             case Opcode::setvarloc:
             case Opcode::pushvarglb:
@@ -152,6 +150,8 @@ namespace diannex
                 break;
             case Opcode::call:
             case Opcode::callext:
+            case Opcode::pushints:
+            case Opcode::pushbints:
                 bw->WriteInt32(arg);
                 bw->WriteInt32(arg2);
                 break;

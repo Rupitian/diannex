@@ -41,6 +41,9 @@ namespace diannex
         // Whether to output public translation files. default: false
         bool translationPublic;
 
+        // Filename of the public translation file. default: binary name
+        std::string translationPublicName;
+
         // Whether or not to compress the binary using zlib. default: true
         bool compression;
 

@@ -5,12 +5,14 @@
 #include "Context.h"
 #include "Instruction.h"
 
+#include <fstream>
+
 namespace diannex
 {
     class Translation
     {
     public:
-        static bool GeneratePublicFile(CompileContext* ctx);
+        static bool GeneratePublicFile(std::ofstream& s, CompileContext* ctx);
     private:
         Translation();
     };

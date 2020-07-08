@@ -2,7 +2,7 @@
 
 namespace diannex
 {
-    bool Translation::GeneratePublicFile(CompileContext* ctx)
+    bool Translation::GeneratePublicFile(std::ofstream& s, CompileContext* ctx)
     {
         // TODO
     }
