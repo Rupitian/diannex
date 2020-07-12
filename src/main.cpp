@@ -362,6 +362,30 @@ int main(int argc, char** argv)
         s.close();
     }
 
+    if(context.project->options.translationPrivate) {
+        std::cout << "Writing private translation file..." << std::endl;
+
+        const fs::path privateOutput = fs::absolute(project.options.translationPrivateOutDir);
+        if(!fs::exists(privateOutput)) {
+            fs::create_directories(privateOutput);
+        }
+        
+        const std::string priFileName = (project.options.translationPublicName.empty() ? binaryName : project.options.translationPublicName) + ".dxt";
+
+        std::ofstream s;
+        s.open((privateOutput / priFileName).string() + "_private", std::ios_base::binary | std::ios_base::out | std::ios_base::trunc);
+        if (s.is_open())
+        {
+            Translation::GeneratePrivateFile(s, &context);
+        }
+        else
+        {
+            std::cout << std::endl << rang::fgB::red << "Failed to open output translation file for writing!\nMake sure that all proper directories exist." << rang::fg::reset << std::endl;
+            return 1;
+        }
+        s.close();
+    }
+
     auto stop = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
 
