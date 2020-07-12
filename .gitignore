@@ -18,3 +18,5 @@ x86/
 Debug/
 Release/
 build/
+out/
+.vscode/

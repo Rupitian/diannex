@@ -324,6 +324,10 @@ int main(int argc, char** argv)
     const std::string binaryName = (project.options.binaryName.empty() ? project.name : project.options.binaryName);
     const std::string fileName = binaryName + ".dxb";
     {
+        if(!fs::exists(mainOutput)) {
+            fs::create_directories(mainOutput);
+        }
+
         BinaryFileWriter bw((mainOutput / fileName).string());
         if (!bw.CanWrite())
         {
