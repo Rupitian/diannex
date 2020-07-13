@@ -50,6 +50,7 @@ namespace diannex
                                  {"binary_outdir", "./out/"},
                                  {"binary_name", ""},
                                  {"translation_private", false},
+                                 {"translation_private_name", ""},
                                  {"translation_private_outdir", "./translations/"},
                                  {"translation_public", false},
                                  {"translation_public_name", ""},
@@ -149,6 +150,10 @@ namespace diannex
         proj.options.translationPrivate = project["options"].contains("translation_private") ?
                                           project["options"]["translation_private"].get<bool>() :
                                           false;
+
+        proj.options.translationPrivateName = project["options"].contains("translation_private_name") ?
+                                             project["options"]["translation_private_name"].get<std::string>() :
+                                             "";
 
         proj.options.translationPrivateOutDir = project["options"].contains("translation_private_outdir") ?
                                                 project["options"]["translation_private_outdir"].get<std::string>() :

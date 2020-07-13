@@ -35,6 +35,9 @@ namespace diannex
         // Whether to output a private translation file with the public one. default: false
         bool translationPrivate;
 
+        // Filename of the private translation file. default: binary name
+        std::string translationPrivateName;
+
         // Directory to output private translation files, if used. default: './translations/'
         std::string translationPrivateOutDir;
 

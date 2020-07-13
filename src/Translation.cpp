@@ -13,6 +13,43 @@ namespace diannex
         }
     }
 
+    void Translation::GeneratePrivateFile(std::ofstream& s, CompileContext* ctx)
+    {
+        std::string prevKey = "";
+
+        for (auto it = ctx->translationInfo.begin(); it != ctx->translationInfo.end(); ++it)
+        {
+            if (it->key != prevKey)
+            {
+                if (prevKey != "")
+                {
+                    s << "\n";
+                }
+
+                prevKey = it->key;
+                s << "@" << prevKey << "\n";
+            }
+
+            if (it->isComment)
+            {
+                size_t startOffset = 0;
+                
+                for (size_t endOffset = 0; endOffset != std::string::npos; startOffset = endOffset + 1)
+                {
+                    endOffset = it->text.find("\n", startOffset);
+                    
+                    s << "#" << it->text.substr(startOffset, (endOffset == std::string::npos) ?
+                                std::string::npos :
+                                endOffset - startOffset) << "\n";
+                }
+            }
+            else
+            {
+                s << "\"" << SanitizeString(it->text) << "\"\n";
+            }
+        }
+    }
+
     std::string Translation::SanitizeString(const std::string& str)
     {
         std::stringstream ss(std::ios_base::app | std::ios_base::out);
