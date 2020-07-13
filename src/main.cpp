@@ -364,11 +364,12 @@ int main(int argc, char** argv)
         s.close();
     }
 
-    if(context.project->options.translationPrivate) {
+    if (context.project->options.translationPrivate) {
         std::cout << "Writing private translation file..." << std::endl;
 
         const fs::path privateOutput = fs::absolute(project.options.translationPrivateOutDir);
-        if(!fs::exists(privateOutput)) {
+        if (!fs::exists(privateOutput))
+        {
             fs::create_directories(privateOutput);
         }
         
