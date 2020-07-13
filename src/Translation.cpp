@@ -33,9 +33,10 @@ namespace diannex
                 size_t endOffset = 0;
                 
                 while(true) {
+                    endOffset = it->text.find("\n", startOffset);
+                    
                     const bool isEnd = (endOffset == std::string::npos);
 
-                    endOffset = it->text.find("\n", startOffset);
                     s << "#" << it->text.substr(startOffset, isEnd ? std::string::npos : endOffset - startOffset) << "\n";
 
                     if(isEnd) {

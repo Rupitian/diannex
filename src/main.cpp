@@ -370,10 +370,10 @@ int main(int argc, char** argv)
             fs::create_directories(privateOutput);
         }
         
-        const std::string priFileName = (project.options.translationPublicName.empty() ? binaryName : project.options.translationPublicName) + ".dxt";
+        const std::string priFileName = (project.options.translationPublicName.empty() ? binaryName : project.options.translationPublicName) + "_private.dxt";
 
         std::ofstream s;
-        s.open((privateOutput / priFileName).string() + "_private", std::ios_base::binary | std::ios_base::out | std::ios_base::trunc);
+        s.open((privateOutput / priFileName).string(), std::ios_base::binary | std::ios_base::out | std::ios_base::trunc);
         if (s.is_open())
         {
             Translation::GeneratePrivateFile(s, &context);
