@@ -51,6 +51,7 @@ int main(int argc, char** argv)
         .add_options()
             ("p,project", "Load project file", cxxopts::value<std::string>())
             ("g,generate", "Generate new project file", cxxopts::value<std::string>()->implicit_value(fs::current_path().filename().string()))
+            ("convert", "Convert a private file to the public format", cxxopts::value<std::vector<std::string>>()->default_value(""))
             ("c,cli", "Don't use a project file and read commands from cli")
             ("h,help", "Shows this message");
 
@@ -72,6 +73,7 @@ int main(int argc, char** argv)
 
     auto result = parse_options(argc, argv, options);
 
+    // Multiple-definition prevention
     if (result.count("project") && result.count("generate"))
     {
         help(options);
@@ -79,16 +81,46 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    if (result.count("cli") && (result.count("project") || result.count("generate")))
+    if (result.count("project") && result.count("convert"))
     {
         help(options);
-        std::cout << "\n--cli can't be used in conjunction with --project or --generate!" << std::endl;
+        std::cout << "\nCan't define --project and --convert at the same time!" << std::endl;
+        return 1;
+    }
+
+    if (result.count("generate") && result.count("convert"))
+    {
+        help(options);
+        std::cout << "\nCan't define --generate and --convert at the same time!" << std::endl;
+        return 1;
+    }
+
+    if (result.count("cli") && (result.count("project") || result.count("generate") || result.count("convert")))
+    {
+        help(options);
+        std::cout << "\n--cli can't be used in conjunction with --project, --generate or --convert!" << std::endl;
         return 1;
     }
 
     if (result.count("generate"))
     {
         generate_project(result["generate"].as<std::string>());
+        return 0;
+    }
+
+    if(result.count("convert")) {
+        std::ifstream in;
+        std::ofstream out;
+
+        const std::vector<std::string> convertArgs = result["convert"].as<std::vector<std::string>>();
+
+        in.open(fs::absolute(convertArgs[0]), std::ios_base::in);
+        out.open(fs::absolute(convertArgs[1]), std::ios_base::out | std::ios_base::trunc);
+
+        Translation::ConvertPrivateToPublic(in, out);
+
+        in.close();
+        out.close();
         return 0;
     }
 
