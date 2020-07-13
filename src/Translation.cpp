@@ -25,7 +25,7 @@ namespace diannex
                 }
 
                 prevKey = it->key;
-                s << "@ " << prevKey << "\n";
+                s << "@" << prevKey << "\n";
             }
 
             if (it->isComment) {
@@ -36,7 +36,7 @@ namespace diannex
                     const bool isEnd = (endOffset == std::string::npos);
 
                     endOffset = it->text.find("\n", startOffset);
-                    s << "# " << it->text.substr(startOffset, isEnd ? std::string::npos : endOffset - startOffset) << "\n";
+                    s << "#" << it->text.substr(startOffset, isEnd ? std::string::npos : endOffset - startOffset) << "\n";
 
                     if(isEnd) {
                         break;
