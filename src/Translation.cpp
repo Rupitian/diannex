@@ -29,7 +29,21 @@ namespace diannex
             }
 
             if (it->isComment) {
-                s << "# " << it->text << "\n";
+                size_t startOffset = 0;
+                size_t endOffset = 0;
+                
+                while(true) {
+                    const bool isEnd = (endOffset == std::string::npos);
+
+                    endOffset = it->text.find("\n", startOffset);
+                    s << "# " << it->text.substr(startOffset, isEnd ? std::string::npos : endOffset - startOffset) << "\n";
+
+                    if(isEnd) {
+                        break;
+                    } else {
+                        startOffset = endOffset + 1;
+                    }
+                }
             } else {
                 s << "\"" << SanitizeString(it->text) << "\"\n";
             }
