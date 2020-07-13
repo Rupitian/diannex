@@ -61,6 +61,7 @@ int main(int argc, char** argv)
             ("t,public", "Whether to output public translation file")
             ("N,pubname", "Name of output public translation file", cxxopts::value<std::string>(), "(default: \"out\")")
             ("T,private", "Whether to output private translation files")
+            ("D,privname", "Name of output public translation file", cxxopts::value<std::string>(), "(default: \"out\")")
             ("d,privdir", "Directory to output private translation files", cxxopts::value<std::string>(), "(default: \"./translations\")")
             ("C,compress", "Whether or not to use compression")
             ("files", "File(s) to compile", cxxopts::value<std::vector<std::string>>()->default_value(""));
@@ -135,6 +136,7 @@ int main(int argc, char** argv)
         project.options.translationPublic = result["public"].count() == 1 ? result["public"].as<bool>() : false;
         project.options.translationPublicName = result["pubname"].count() == 1 ? result["pubname"].as<std::string>() : "out";
         project.options.translationPrivate = result["private"].count() == 1 ? result["private"].as<bool>() : false;
+        project.options.translationPrivateName = result["privname"].count() == 1 ? result["privname"].as<std::string>() : "out";
         project.options.translationPrivateOutDir = result["privdir"].count() == 1 ? result["privdir"].as<std::string>() : "./translations";
         project.options.compression = result["compress"].count() == 1 ? result["compress"].as<bool>() : false;
         loaded = true;
@@ -370,10 +372,10 @@ int main(int argc, char** argv)
             fs::create_directories(privateOutput);
         }
         
-        const std::string priFileName = (project.options.translationPublicName.empty() ? binaryName : project.options.translationPublicName) + "_private.dxt";
+        const std::string privFileName = (project.options.translationPrivateName.empty() ? binaryName : project.options.translationPrivateName) + ".dxt";
 
         std::ofstream s;
-        s.open((privateOutput / priFileName).string(), std::ios_base::binary | std::ios_base::out | std::ios_base::trunc);
+        s.open((privateOutput / privFileName).string(), std::ios_base::binary | std::ios_base::out | std::ios_base::trunc);
         if (s.is_open())
         {
             Translation::GeneratePrivateFile(s, &context);
