@@ -42,7 +42,8 @@ namespace diannex
                                 std::string::npos :
                                 endOffset - startOffset) << "\n";
                 }
-            } else
+            }
+            else
             {
                 s << "\"" << SanitizeString(it->text) << "\"\n";
             }
