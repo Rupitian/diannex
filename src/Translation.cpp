@@ -30,20 +30,11 @@ namespace diannex
 
             if (it->isComment) {
                 size_t startOffset = 0;
-                size_t endOffset = 0;
                 
-                while(true) {
+                for(size_t endOffset = 0; endOffset != std::string::npos; startOffset = endOffset + 1) {
                     endOffset = it->text.find("\n", startOffset);
                     
-                    const bool isEnd = (endOffset == std::string::npos);
-
-                    s << "#" << it->text.substr(startOffset, isEnd ? std::string::npos : endOffset - startOffset) << "\n";
-
-                    if(isEnd) {
-                        break;
-                    } else {
-                        startOffset = endOffset + 1;
-                    }
+                    s << "#" << it->text.substr(startOffset, (endOffset == std::string::npos) ? std::string::npos : endOffset - startOffset) << "\n";
                 }
             } else {
                 s << "\"" << SanitizeString(it->text) << "\"\n";

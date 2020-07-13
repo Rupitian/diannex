@@ -61,7 +61,7 @@ int main(int argc, char** argv)
             ("t,public", "Whether to output public translation file")
             ("N,pubname", "Name of output public translation file", cxxopts::value<std::string>(), "(default: \"out\")")
             ("T,private", "Whether to output private translation files")
-            ("D,privname", "Name of output public translation file", cxxopts::value<std::string>(), "(default: \"out\")")
+            ("D,privname", "Name of output private translation file", cxxopts::value<std::string>(), "(default: \"out\")")
             ("d,privdir", "Directory to output private translation files", cxxopts::value<std::string>(), "(default: \"./translations\")")
             ("C,compress", "Whether or not to use compression")
             ("files", "File(s) to compile", cxxopts::value<std::vector<std::string>>()->default_value(""));
