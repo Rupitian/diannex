@@ -14,6 +14,9 @@ namespace diannex
     public:
         static void GeneratePublicFile(std::ofstream& s, CompileContext* ctx);
         static void GeneratePrivateFile(std::ofstream& s, CompileContext* ctx);
+
+        static void ConvertPrivateToPublic(std::ifstream& in, std::ofstream& out);
+
         static std::string SanitizeString(const std::string& str);
     private:
         Translation();

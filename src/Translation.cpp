@@ -50,6 +50,26 @@ namespace diannex
         }
     }
 
+    void Translation::ConvertPrivateToPublic(std::ifstream& in, std::ofstream& out) {
+        CompileContext ctx;
+        std::string text = "";
+        TranslationInfo translationInfo;
+        translationInfo.isComment = false;
+        
+        while (std::getline(in, text))
+        {
+            const size_t infoStart = text.find_first_not_of(" ");
+
+            if (text[infoStart] == '"')
+            {
+                translationInfo.text = text.substr(infoStart + 1, text.find_last_of('"') - infoStart - 1);
+                ctx.translationInfo.push_back(translationInfo);
+            }
+        }
+
+        GeneratePublicFile(out, &ctx);
+    }
+
     std::string Translation::SanitizeString(const std::string& str)
     {
         std::stringstream ss(std::ios_base::app | std::ios_base::out);
