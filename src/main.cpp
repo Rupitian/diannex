@@ -51,12 +51,17 @@ int main(int argc, char** argv)
         .add_options()
             ("p,project", "Load project file", cxxopts::value<std::string>())
             ("g,generate", "Generate new project file", cxxopts::value<std::string>()->implicit_value(fs::current_path().filename().string()))
-            ("convert", "Convert a private file to the public format", cxxopts::value<std::vector<std::string>>()->default_value(""))
+            ("convert", "Convert a private file to the public format")
             ("c,cli", "Don't use a project file and read commands from cli")
             ("h,help", "Shows this message");
 
     options
-        .add_options("Project Settings")
+        .add_options("Conversion")
+            ("in", "Path to private input file", cxxopts::value<std::string>())
+            ("out", "Path to public output file", cxxopts::value<std::string>());
+
+    options
+        .add_options("Project")
             ("b,binary", "Directory to output binary", cxxopts::value<std::string>(), "(default: \"./out\")")
             ("n,name", "Name of output binary file", cxxopts::value<std::string>(), "(default: \"out\")")
             ("t,public", "Whether to output public translation file")
@@ -73,7 +78,7 @@ int main(int argc, char** argv)
 
     auto result = parse_options(argc, argv, options);
 
-    // Multiple-definition prevention
+    // Prevent incorrect usage
     if (result.count("project") && result.count("generate"))
     {
         help(options);
@@ -102,20 +107,52 @@ int main(int argc, char** argv)
         return 1;
     }
 
+    if ((result.count("in") || result.count("out")) && !result.count("convert"))
+    {
+        help(options);
+        std::cout << "\n--convert must be used with --in and --out" << std::endl;
+        return 1;
+    }
+
+    // --generate
     if (result.count("generate"))
     {
         generate_project(result["generate"].as<std::string>());
         return 0;
     }
 
-    if(result.count("convert")) {
+    // --convert
+    if (result.count("convert"))
+    {
+        if (!result.count("in"))
+        {
+            help(options);
+            std::cout << "\n--in is required for --convert!" << std::endl;
+            return 1;
+        }
+
+        if (!result.count("out"))
+        {
+            help(options);
+            std::cout << "\n--out is required for --convert!" << std::endl;
+            return 1;
+        }
+
         std::ifstream in;
         std::ofstream out;
 
-        const std::vector<std::string> convertArgs = result["convert"].as<std::vector<std::string>>();
+        const std::string inResult = result["in"].as<std::string>();
+        const std::string outResult = result["out"].as<std::string>();
 
-        in.open(fs::absolute(convertArgs[0]), std::ios_base::in);
-        out.open(fs::absolute(convertArgs[1]), std::ios_base::out | std::ios_base::trunc);
+        if (!fs::exists(inResult))
+            fs::create_directories(inResult);
+
+        if (!fs::exists(outResult))
+            fs::create_directories(outResult);
+
+
+        in.open(fs::absolute(inResult), std::ios_base::in);
+        out.open(fs::absolute(outResult), std::ios_base::out | std::ios_base::trunc);
 
         Translation::ConvertPrivateToPublic(in, out);
 
@@ -126,6 +163,7 @@ int main(int argc, char** argv)
 
     fs::path baseDirectory;
 
+    // --project
     if (result.count("project"))
     {
         // TODO: Clean this up, perhaps put it in a class method
@@ -155,6 +193,7 @@ int main(int argc, char** argv)
         loaded = true;
     }
 
+    // --cli
     if (result.count("cli"))
     {
         project = ProjectFormat();
