@@ -751,6 +751,7 @@ namespace diannex
                         if (Token t = parser->peekToken(); t.type == TokenType::MainKeyword && t.keywordType == KeywordType::Else)
                         {
                             parser->advance();
+                            parser->skipNewlines();
                             res->nodes.push_back(Node::ParseSceneStatement(parser, KeywordType::None));
                         }
                     }
