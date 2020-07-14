@@ -340,10 +340,10 @@ namespace diannex
                         ctx->bytecode.emplace_back(Instruction::Opcode::mod);
                         break;
                     case TokenType::BitwiseAndEquals:
-                        ctx->bytecode.emplace_back(Instruction::Opcode::bitand);
+                        ctx->bytecode.emplace_back(Instruction::Opcode::_bitand);
                         break;
                     case TokenType::BitwiseOrEquals:
-                        ctx->bytecode.emplace_back(Instruction::Opcode::bitor);
+                        ctx->bytecode.emplace_back(Instruction::Opcode::_bitor);
                         break;
                     case TokenType::BitwiseXorEquals:
                         ctx->bytecode.emplace_back(Instruction::Opcode::bitxor);
@@ -862,10 +862,10 @@ namespace diannex
                     ctx->bytecode.emplace_back(Instruction::Opcode::cmpneq);
                     break;
                 case TokenType::BitwiseOr:
-                    ctx->bytecode.emplace_back(Instruction::Opcode::bitor);
+                    ctx->bytecode.emplace_back(Instruction::Opcode::_bitor);
                     break;
                 case TokenType::BitwiseAnd:
-                    ctx->bytecode.emplace_back(Instruction::Opcode::bitand);
+                    ctx->bytecode.emplace_back(Instruction::Opcode::_bitand);
                     break;
                 case TokenType::BitwiseXor:
                     ctx->bytecode.emplace_back(Instruction::Opcode::bitxor);

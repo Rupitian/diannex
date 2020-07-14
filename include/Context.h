@@ -7,6 +7,7 @@
 #include <unordered_set>
 #include <optional>
 #include <variant>
+#include <algorithm>
 
 #include "Instruction.h"
 #include "Project.h"

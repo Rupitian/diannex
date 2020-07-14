@@ -107,12 +107,30 @@ The tool is a command-line application, with these options which can be seen sim
   --files                       File(s) to compile
   ```
   
-  ## Building
-TODO
-  
-  ## Contributors
-  [colinator27](https://github.com/colinator27)
-  
-  [PeriBooty](https://github.com/PeriBooty)
-  
-  [MadCreativity](https://github.com/aam051102)
+## Building
+This project uses [CMake](https://cmake.org/) to compile, but it also requires a C++ compiler with non-experimental C++17 support. (C++17 classes shouldn't be in the `std::experimental` namespace)
+
+If you have these requments satisfied, then you should just be able to compile with the following commands:
+```zsh
+$ mkdir build && cd build
+$ cmake ..
+$ cmake --build .
+```
+
+If you're using a compiler that requires linking a library for std::filesystem (for example, a GCC version less than GCC 9), set either the `LINK_LIBSTD_FS` or `LINK_LIBCPP_FS` flags to link with `-lstdc++fs` or `-lc++fs` respectively.
+
+## Libraries
+[jarro2783/cxxopts](https://github.com/jarro2783/cxxopts) is licensed under the [MIT License](https://github.com/jarro2783/cxxopts/blob/master/LICENSE).
+
+[nlohmann/json](https://github.com/nlohmann/json) is licensed under the [MIT License](https://github.com/nlohmann/json/blob/develop/LICENSE.MIT).
+
+[agauniyal/rang](https://github.com/agauniyal/rang) is [Unlicensed](https://github.com/agauniyal/rang/blob/master/LICENSE).
+
+[richgel999/miniz](https://github.com/richgel999/miniz) is licensed under the [MIT License](https://github.com/richgel999/miniz/blob/master/LICENSE).
+
+## Contributors
+[colinator27](https://github.com/colinator27)
+
+[PeriBooty](https://github.com/PeriBooty)
+
+[MadCreativity](https://github.com/aam051102)

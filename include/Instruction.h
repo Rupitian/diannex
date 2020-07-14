@@ -3,6 +3,10 @@
 
 #include "BinaryWriter.h"
 
+#ifndef _MSC_VER
+typedef double double_t;
+#endif
+
 namespace diannex
 {
     struct Instruction
@@ -51,8 +55,8 @@ namespace diannex
 
             bitls = 0x27, // Peforms bitwise left-shift using the top two values of stack, popping them, pushing the result
             bitrs = 0x28, // ditto, right-shift
-            bitand = 0x29, // ditto, and
-            bitor = 0x2A, // ditto, or
+            _bitand = 0x29, // ditto, and
+            _bitor = 0x2A, // ditto, or
             bitxor = 0x2B, // ditto, xor
             bitneg = 0x2C, // ditto, negate (~)
 
