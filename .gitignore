@@ -20,3 +20,5 @@ Release/
 build/
 out/
 .vscode/
+.vs/
+CMakeSettings.json

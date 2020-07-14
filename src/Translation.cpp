@@ -16,14 +16,17 @@ namespace diannex
     void Translation::GeneratePrivateFile(std::ofstream& s, CompileContext* ctx)
     {
         std::string prevKey = "";
+        bool first = true;
 
         for (auto it = ctx->translationInfo.begin(); it != ctx->translationInfo.end(); ++it)
         {
             if (it->key != prevKey)
             {
-                if (prevKey != "")
+                if (prevKey != "" || first)
                 {
                     s << "\n";
+
+                    first = false;
                 }
 
                 prevKey = it->key;
@@ -38,9 +41,17 @@ namespace diannex
                 {
                     endOffset = it->text.find("\n", startOffset);
                     
-                    s << "#" << it->text.substr(startOffset, (endOffset == std::string::npos) ?
-                                std::string::npos :
-                                endOffset - startOffset) << "\n";
+                    std::string str = it->text.substr(startOffset, (endOffset == std::string::npos) ? std::string::npos : endOffset - startOffset);
+                    if (str.length() != 0 && std::isspace(str.at(0)))
+                    {
+                        // Push to the left; only have one space
+                        str.erase(str.begin(), std::find_if(str.begin(), str.end(), [](int ch) 
+                        {
+                            return !std::isspace(ch);
+                        }));
+                        str.insert(str.begin(), ' ');
+                    }
+                    s << "#" << str << "\n";
                 }
             }
             else
@@ -50,7 +61,8 @@ namespace diannex
         }
     }
 
-    void Translation::ConvertPrivateToPublic(std::ifstream& in, std::ofstream& out) {
+    void Translation::ConvertPrivateToPublic(std::ifstream& in, std::ofstream& out) 
+    {
         CompileContext ctx;
         std::string text = "";
         TranslationInfo translationInfo;

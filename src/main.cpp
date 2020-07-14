@@ -141,23 +141,40 @@ int main(int argc, char** argv)
         std::ifstream in;
         std::ofstream out;
 
-        const std::string inResult = result["in"].as<std::string>();
-        const std::string outResult = result["out"].as<std::string>();
+        const std::filesystem::path& inResult = fs::absolute(result["in"].as<std::string>());
+        const std::filesystem::path& outResult = fs::absolute(result["out"].as<std::string>());
 
         if (!fs::exists(inResult))
-            fs::create_directories(inResult);
+            fs::create_directories(inResult.parent_path());
 
         if (!fs::exists(outResult))
-            fs::create_directories(outResult);
+            fs::create_directories(outResult.parent_path());
 
 
-        in.open(fs::absolute(inResult), std::ios_base::in);
-        out.open(fs::absolute(outResult), std::ios_base::out | std::ios_base::trunc);
+        std::cout << "Converting..." << std::endl;
+
+        in.open(inResult, std::ios_base::binary | std::ios_base::in);
+        out.open(outResult, std::ios_base::binary | std::ios_base::out | std::ios_base::trunc);
+
+        if (!in.is_open())
+        {
+            std::cout << std::endl << rang::fgB::red << "Failed to open input private translation file for reading!" << rang::fg::reset << std::endl;
+            return 1;
+        }
+        if (!out.is_open())
+        {
+            in.close();
+            std::cout << std::endl << rang::fgB::red << "Failed to open output public translation file for writing!" << rang::fg::reset << std::endl;
+            return 1;
+        }
 
         Translation::ConvertPrivateToPublic(in, out);
 
         in.close();
         out.close();
+
+        std::cout << "Completed!" << std::endl;
+
         return 0;
     }
 
@@ -396,15 +413,13 @@ int main(int argc, char** argv)
     const fs::path mainOutput = fs::absolute(project.options.binaryOutputDir);
     const std::string binaryName = (project.options.binaryName.empty() ? project.name : project.options.binaryName);
     const std::string fileName = binaryName + ".dxb";
+    if (!fs::exists(mainOutput))
+        fs::create_directories(mainOutput);
     {
-        if(!fs::exists(mainOutput)) {
-            fs::create_directories(mainOutput);
-        }
-
         BinaryFileWriter bw((mainOutput / fileName).string());
         if (!bw.CanWrite())
         {
-            std::cout << std::endl << rang::fgB::red << "Failed to open output binary file for writing!\nMake sure that all proper directories exist." << rang::fg::reset << std::endl;
+            std::cout << std::endl << rang::fgB::red << "Failed to open output binary file for writing!" << rang::fg::reset << std::endl;
             return 1;
         }
         if (!Binary::Write(&bw, &context))
@@ -429,20 +444,19 @@ int main(int argc, char** argv)
         }
         else
         {
-            std::cout << std::endl << rang::fgB::red << "Failed to open output translation file for writing!\nMake sure that all proper directories exist." << rang::fg::reset << std::endl;
+            std::cout << std::endl << rang::fgB::red << "Failed to open output translation file for writing!" << rang::fg::reset << std::endl;
             return 1;
         }
         s.close();
     }
 
-    if (context.project->options.translationPrivate) {
+    if (context.project->options.translationPrivate) 
+    {
         std::cout << "Writing private translation file..." << std::endl;
 
         const fs::path privateOutput = fs::absolute(project.options.translationPrivateOutDir);
         if (!fs::exists(privateOutput))
-        {
             fs::create_directories(privateOutput);
-        }
         
         const std::string privFileName = (project.options.translationPrivateName.empty() ? binaryName : project.options.translationPrivateName) + ".dxt";
 
