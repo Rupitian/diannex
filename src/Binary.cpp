@@ -18,7 +18,7 @@ namespace diannex
     bool Binary::Write(BinaryWriter* bw, CompileContext* ctx)
     {
         bw->WriteBytes("DNX", 3);
-        bw->WriteUInt8(0); // Version
+        bw->WriteUInt8(1); // Version
 
         // Flags
         bool compressed = ctx->project->options.compression,

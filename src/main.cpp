@@ -206,7 +206,6 @@ int main(int argc, char** argv)
         if (result["compress"].count())
             project.options.compression = result["compress"].as<bool>();
 
-        print_project(projectFilePath, project);
         loaded = true;
     }
 
