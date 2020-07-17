@@ -409,7 +409,7 @@ int main(int argc, char** argv)
 
     // Write binary
     std::cout << "Writing binary..." << std::endl;
-    const fs::path mainOutput = fs::absolute(project.options.binaryOutputDir);
+    const fs::path mainOutput = fs::absolute(baseDirectory / project.options.binaryOutputDir);
     const std::string binaryName = (project.options.binaryName.empty() ? project.name : project.options.binaryName);
     const std::string fileName = binaryName + ".dxb";
     if (!fs::exists(mainOutput))
@@ -453,7 +453,7 @@ int main(int argc, char** argv)
     {
         std::cout << "Writing private translation file..." << std::endl;
 
-        const fs::path privateOutput = fs::absolute(project.options.translationPrivateOutDir);
+        const fs::path privateOutput = fs::absolute(baseDirectory / project.options.translationPrivateOutDir);
         if (!fs::exists(privateOutput))
             fs::create_directories(privateOutput);
         

@@ -30,7 +30,8 @@ namespace diannex
                 }
 
                 prevKey = it->key;
-                s << "@" << prevKey << "\n";
+                if (prevKey != "")
+                    s << "@" << prevKey << "\n";
             }
 
             if (it->isComment)
@@ -58,6 +59,8 @@ namespace diannex
             {
                 s << "\"" << SanitizeString(it->text) << "\"\n";
             }
+
+            first = false;
         }
     }
 
