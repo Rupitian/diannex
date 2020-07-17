@@ -4,13 +4,14 @@
 
 namespace diannex
 {
-    static std::string expandSymbol(CompileContext* ctx)
+    static std::string expandSymbol(CompileContext* ctx, int offsetSize = 0)
     {
         std::stringstream ss(std::ios_base::app | std::ios_base::out);
-        for (int i = 0; i < ctx->symbolStack.size(); i++)
+        int size = ctx->symbolStack.size() - offsetSize;
+        for (int i = 0; i < size; i++)
         {
             ss << ctx->symbolStack.at(i);
-            if (i + 1 != ctx->symbolStack.size())
+            if (i + 1 != size)
                 ss << '.';
         }
         return ss.str();
@@ -94,6 +95,16 @@ namespace diannex
                 patch(*it, ctx);
         }
         ctx->loopStack.pop_back();
+    }
+
+    static void patchCall(int32_t count, std::string str, CompileContext* ctx, BytecodeResult* res)
+    {
+        uint16_t size = ctx->symbolStack.size();
+        std::vector<std::string>* vec = new std::vector<std::string>();
+        vec->push_back(str);
+        for (int i = 0; i < size - 1; i++)
+            vec->push_back(expandSymbol(ctx, (size - 1) - i));
+        ctx->bytecode.push_back(Instruction::make_patch_call(count, vec));
     }
 
     BytecodeResult* Bytecode::Generate(ParseResult* parsed, CompileContext* ctx)
@@ -395,7 +406,7 @@ namespace diannex
                 }
                 break;
             }
-            ctx->bytecode.push_back(Instruction::make_int2(Instruction::Opcode::PATCH_CALL, ctx->string("char"), 1));
+            patchCall(1, "char", ctx, res);
             ctx->bytecode.emplace_back(Instruction::Opcode::pop);
             pushLocalContext(ctx);
             GenerateSceneStatement(sc->nodes.at(0), ctx, res);
@@ -406,7 +417,7 @@ namespace diannex
         {
             for (auto it = statement->nodes.rbegin(); it != statement->nodes.rend(); ++it)
                 GenerateExpression(*it, ctx, res);
-            ctx->bytecode.push_back(Instruction::make_int2(Instruction::Opcode::PATCH_CALL, ctx->string(((NodeContent*)statement)->content), statement->nodes.size()));
+            patchCall(statement->nodes.size(), ((NodeContent*)statement)->content, ctx, res);
             ctx->bytecode.emplace_back(Instruction::Opcode::pop);
             break;
         }
@@ -1088,7 +1099,7 @@ namespace diannex
         {
             for (auto it = expr->nodes.rbegin(); it != expr->nodes.rend(); ++it)
                 GenerateExpression(*it, ctx, res);
-            ctx->bytecode.push_back(Instruction::make_int2(Instruction::Opcode::PATCH_CALL, ctx->string(((NodeContent*)expr)->content), expr->nodes.size()));
+            patchCall(expr->nodes.size(), ((NodeContent*)expr)->content, ctx, res);
             break;
         }
         }

@@ -101,6 +101,13 @@ namespace diannex
                 int32_t arg2;
             };
 
+            // For PATCH_CALL
+            struct
+            {
+                int32_t count;
+                std::vector<std::string>* vec;
+            };
+
             double_t argDouble;
         };
 
@@ -127,6 +134,14 @@ namespace diannex
         {
             Instruction res = Instruction(opcode);
             res.argDouble = arg;
+            return res;
+        }
+
+        static inline Instruction make_patch_call(int32_t count, std::vector<std::string>* vec)
+        {
+            Instruction res = Instruction(Opcode::PATCH_CALL);
+            res.count = count;
+            res.vec = vec;
             return res;
         }
 
