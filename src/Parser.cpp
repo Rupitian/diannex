@@ -1585,6 +1585,7 @@ namespace diannex
             parser->skipNewlines();
             if (parser->ensureToken(TokenType::Equals).type != TokenType::Error)
             {
+                parser->skipNewlines();
                 Token val = parser->ensureToken(TokenType::String, TokenType::ExcludeString);
                 if (val.type != TokenType::Error)
                 {

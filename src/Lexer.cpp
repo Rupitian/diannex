@@ -202,12 +202,12 @@ namespace diannex
 
         static bool isValidIdentifierStart(char c)
         {
-            return (c >= 'a' && c < 'z') || (c >= 'A' && c <= 'Z') || c == '_' || (unsigned char)c >= 0xC0;
+            return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || (unsigned char)c >= 0xC0;
         }
 
         static bool isValidIdentifierMid(char c)
         {
-            return (c >= 'a' && c < 'z') || (c >= 'A' && c <= 'Z') || c == '_' || c == '.' || (c >= '0' && c <= '9') || (unsigned char)c >= 0x80;
+            return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || c == '.' || (c >= '0' && c <= '9') || (unsigned char)c >= 0x80;
         }
     };
 
