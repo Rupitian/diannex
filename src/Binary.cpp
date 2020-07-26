@@ -127,9 +127,15 @@ namespace diannex
         // Internal translation file (if applicable)
         if (internalTranslationFile)
         {
-            bmw.WriteUInt32(ctx->translationInfo.size());
+            uint32_t count = 0;
             for (auto it = ctx->translationInfo.begin(); it != ctx->translationInfo.end(); ++it)
-                bmw.WriteString(it->text);
+                if (!it->isComment)
+                    count++;
+
+            bmw.WriteUInt32(count);
+            for (auto it = ctx->translationInfo.begin(); it != ctx->translationInfo.end(); ++it)
+                if (!it->isComment)
+                    bmw.WriteString(it->text);
         }
 
         uint32_t size = bmw.GetSize();
