@@ -1,6 +1,7 @@
 #include "Translation.h"
 
 #include <sstream>
+#include <cctype>
 
 namespace diannex
 {
