@@ -18,6 +18,7 @@ namespace diannex
     {
         std::string prevKey = "";
         bool first = true;
+        bool writtenAnything = false;
 
         for (auto it = ctx->translationInfo.begin(); it != ctx->translationInfo.end(); ++it)
         {
@@ -25,14 +26,18 @@ namespace diannex
             {
                 if (prevKey != "" || first)
                 {
-                    s << "\n";
+                    if (writtenAnything)
+                       s << "\n";
 
                     first = false;
                 }
 
                 prevKey = it->key;
                 if (prevKey != "")
+                {
                     s << "@" << prevKey << "\n";
+                    writtenAnything = true;
+                }
             }
 
             if (it->isComment)
@@ -54,11 +59,13 @@ namespace diannex
                         str.insert(str.begin(), ' ');
                     }
                     s << "#" << str << "\n";
+                    writtenAnything = true;
                 }
             }
             else
             {
                 s << "\"" << SanitizeString(it->text) << "\"\n";
+                writtenAnything = true;
             }
 
             first = false;

@@ -33,8 +33,9 @@ namespace diannex
         ProjectFormat* project;
         std::queue<std::string> queue;
         std::string currentFile;
-        std::unordered_map<std::string, std::vector<struct Token>> tokenList;
-        std::unordered_map<std::string, struct ParseResult*> parseList;
+        std::unordered_set<std::string> files;
+        std::vector<std::pair<std::string, std::vector<struct Token>>> tokenList;
+        std::vector<std::pair<std::string, struct ParseResult*>> parseList;
         std::unordered_map<std::string, int> sceneBytecode;
         std::unordered_map<std::string, int> functionBytecode;
         std::unordered_set<std::string> definitions;

@@ -255,7 +255,7 @@ int main(int argc, char** argv)
         {
             if (!fs::exists(file))
                 throw std::runtime_error("File does not exist.");
-            if (context.tokenList.find(file) != context.tokenList.end())
+            if (context.files.find(file) != context.files.end())
                 continue; // Already tokenized this file
             std::ifstream f(file, std::ios::in);
             f.seekg(0, std::ios::end);
@@ -275,7 +275,8 @@ int main(int argc, char** argv)
         std::vector<Token> tokens;
         Lexer::LexString(buf, &context, tokens);
 
-        context.tokenList.insert(std::make_pair(file, tokens));
+        context.tokenList.push_back(std::make_pair(file, tokens));
+        context.files.insert(file);
     }
 
     if (fatalError)
@@ -286,9 +287,9 @@ int main(int argc, char** argv)
 
     // Parse each token stream
     std::cout << "Parsing..." << std::endl;
-    for (auto& kvp : context.tokenList)
+    for (auto& pair : context.tokenList)
     {
-        ParseResult* parsed = Parser::ParseTokens(&context, &kvp.second);
+        ParseResult* parsed = Parser::ParseTokens(&context, &pair.second);
         if (parsed->errors.size() != 0)
         {
             if (!fatalError)
@@ -301,7 +302,10 @@ int main(int argc, char** argv)
 
             for (ParseError& e : parsed->errors)
             {
-                std::cout << "[" << kvp.first << ":" << e.line << ":" << e.column << "] ";
+                if (e.line == 0 && e.column == 0)
+                    std::cout << "[" << pair.first << ":?:?] ";
+                else
+                    std::cout << "[" << pair.first << ":" << e.line << ":" << e.column << "] ";
                 switch (e.type)
                 {
                 case ParseError::ErrorType::ExpectedTokenButGot:
@@ -341,7 +345,7 @@ int main(int argc, char** argv)
         }
         else
         {
-            context.parseList.insert(std::make_pair(kvp.first, parsed));
+            context.parseList.push_back(std::make_pair(pair.first, parsed));
         }
     }
 
@@ -353,9 +357,9 @@ int main(int argc, char** argv)
 
     // Generate bytecode
     std::cout << "Generating bytecode..." << std::endl;
-    for (auto& kvp : context.parseList)
+    for (auto& pair : context.parseList)
     {
-        BytecodeResult* bytecode = Bytecode::Generate(kvp.second, &context);
+        BytecodeResult* bytecode = Bytecode::Generate(pair.second, &context);
         if (bytecode->errors.size() != 0)
         {
             if (!fatalError)
@@ -369,9 +373,9 @@ int main(int argc, char** argv)
             for (BytecodeError& e : bytecode->errors)
             {
                 if (e.line == 0 && e.column == 0)
-                    std::cout << "[" << kvp.first << ":?:?] ";
+                    std::cout << "[" << pair.first << ":?:?] ";
                 else
-                    std::cout << "[" << kvp.first << ":" << e.line << ":" << e.column << "] ";
+                    std::cout << "[" << pair.first << ":" << e.line << ":" << e.column << "] ";
                 
                 switch (e.type)
                 {
