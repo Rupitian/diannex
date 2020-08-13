@@ -114,6 +114,31 @@ namespace diannex
         return res;
     }
 
+    template<typename T>
+    static void generateFlagExpressions(T* node, const std::string& symbol, std::vector<int>& bytecodeIndices, CompileContext* ctx, BytecodeResult* res)
+    {
+        for (auto it = node->flags.begin(); it != node->flags.end(); ++it)
+        {
+            NodeContent* flag = *it;
+
+            bytecodeIndices.push_back(ctx->bytecode.size());
+            Bytecode::GenerateExpression(flag->nodes.at(0), ctx, res);
+            ctx->bytecode.emplace_back(Instruction::Opcode::exit);
+
+            bytecodeIndices.push_back(ctx->bytecode.size());
+            if (flag->nodes.size() == 2)
+            {
+                Bytecode::GenerateExpression(flag->nodes.at(1), ctx, res);
+                ctx->bytecode.emplace_back(Instruction::Opcode::exit);
+            }
+            else
+            {
+                ctx->bytecode.push_back(Instruction::make_int(Instruction::Opcode::pushbs, ctx->string(symbol + "_" + flag->content)));
+                ctx->bytecode.emplace_back(Instruction::Opcode::exit);
+            }
+        }
+    }
+
     void Bytecode::GenerateBlock(Node* block, CompileContext* ctx, BytecodeResult* res)
     {
         for (Node* n : block->nodes)
@@ -130,24 +155,38 @@ namespace diannex
                 break;
             case Node::NodeType::Scene:
             {
-                NodeContent* nc = ((NodeContent*)n);
-                ctx->symbolStack.push_back(nc->content);
+                NodeScene* ns = ((NodeScene*)n);
+                ctx->symbolStack.push_back(ns->content);
                 const std::string& symbol = expandSymbol(ctx);
                 if (ctx->sceneBytecode.count(symbol))
-                    res->errors.push_back({ BytecodeError::ErrorType::SceneAlreadyExists, nc->token.line, nc->token.column, std::string(symbol) });
+                    res->errors.push_back({ BytecodeError::ErrorType::SceneAlreadyExists, ns->token.line, ns->token.column, std::string(symbol) });
                
                 int pos = ctx->bytecode.size();
                 ctx->generatingFunction = false;
 
+                // Define flag locals
+                pushLocalContext(ctx);
+                ctx->localCountStack.back() = ns->flags.size();
+                for (auto it = ns->flags.begin(); it != ns->flags.end(); ++it)
+                    ctx->localStack.push_back((*it)->content);
+
                 GenerateSceneBlock(n, ctx, res);
 
+                popLocalContext(ctx);
+
+                std::vector<int> bytecodeIndices;
                 if (pos == ctx->bytecode.size())
-                    ctx->sceneBytecode.insert(std::make_pair(symbol, -1));
+                    bytecodeIndices.push_back(-1); // No bytecode
                 else
                 {
                     ctx->bytecode.emplace_back(Instruction::Opcode::exit);
-                    ctx->sceneBytecode.insert(std::make_pair(symbol, pos));
+                    bytecodeIndices.push_back(pos);
                 }
+
+                // Also deal with flag expressions here
+                generateFlagExpressions(ns, symbol, bytecodeIndices, ctx, res);
+
+                ctx->sceneBytecode.insert(std::make_pair(symbol, bytecodeIndices));
 
                 ctx->symbolStack.pop_back();
                 break;
@@ -162,20 +201,31 @@ namespace diannex
                 int pos = ctx->bytecode.size();
                 ctx->generatingFunction = true;
 
+                // Define flag locals and then arguments
                 pushLocalContext(ctx);
-                ctx->localCountStack.back() = func->args.size();
+                ctx->localCountStack.back() = func->flags.size() + func->args.size();
+                for (auto it = func->flags.begin(); it != func->flags.end(); ++it)
+                    ctx->localStack.push_back((*it)->content);
                 for (auto it = func->args.begin(); it != func->args.end(); ++it)
                     ctx->localStack.push_back(it->content);
-                GenerateSceneBlock(n, ctx, res);
-                popLocalContext(ctx);
 
+                GenerateSceneBlock(n, ctx, res);
+
+                popLocalContext(ctx);
+                
+                std::vector<int> bytecodeIndices;
                 if (pos == ctx->bytecode.size())
-                    ctx->functionBytecode.insert(std::make_pair(symbol, -1));
+                    bytecodeIndices.push_back(-1); // No bytecode
                 else
                 {
                     ctx->bytecode.emplace_back(Instruction::Opcode::exit);
-                    ctx->functionBytecode.insert(std::make_pair(symbol, pos));
+                    bytecodeIndices.push_back(pos);
                 }
+
+                // Also deal with flag expressions here
+                generateFlagExpressions(func, symbol, bytecodeIndices, ctx, res);
+
+                ctx->functionBytecode.insert(std::make_pair(symbol, bytecodeIndices));
 
                 ctx->symbolStack.pop_back();
                 break;

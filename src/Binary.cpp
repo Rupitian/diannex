@@ -18,7 +18,7 @@ namespace diannex
     bool Binary::Write(BinaryWriter* bw, CompileContext* ctx)
     {
         bw->WriteBytes("DNX", 3);
-        bw->WriteUInt8(1); // Version
+        bw->WriteUInt8(2); // Version
 
         // Flags
         bool compressed = ctx->project->options.compression,
@@ -34,8 +34,11 @@ namespace diannex
             // Symbol
             bmw.WriteUInt32(ctx->string(it->first));
 
-            // Bytecode index
-            bmw.WriteInt32(it->second);
+            // Bytecode indices (scene bytecode and flag expressions)
+            int size = it->second.size();
+            bmw.WriteUInt16(size);
+            for (int i = 0; i < size; i++)
+                bmw.WriteInt32(it->second.at(i));
         }
 
         // Function metadata
@@ -45,8 +48,11 @@ namespace diannex
             // Symbol
             bmw.WriteUInt32(ctx->string(it->first));
 
-            // Bytecode index
-            bmw.WriteInt32(it->second);
+            // Bytecode indices (function bytecode and flag expressions)
+            int size = it->second.size();
+            bmw.WriteUInt16(size);
+            for (int i = 0; i < size; i++)
+                bmw.WriteInt32(it->second.at(i));
         }
 
         // Definition metadata

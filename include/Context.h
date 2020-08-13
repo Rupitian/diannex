@@ -36,8 +36,8 @@ namespace diannex
         std::unordered_set<std::string> files;
         std::vector<std::pair<std::string, std::vector<struct Token>>> tokenList;
         std::vector<std::pair<std::string, struct ParseResult*>> parseList;
-        std::unordered_map<std::string, int> sceneBytecode;
-        std::unordered_map<std::string, int> functionBytecode;
+        std::unordered_map<std::string, std::vector<int>> sceneBytecode;
+        std::unordered_map<std::string, std::vector<int>> functionBytecode;
         std::unordered_set<std::string> definitions;
         std::unordered_map<std::string, std::pair<std::variant<int, std::string>, int>> definitionBytecode;
         std::vector<Instruction> bytecode;

@@ -289,6 +289,10 @@ namespace diannex
     {
     }
 
+    NodeScene::NodeScene(Token token) : NodeContent(token, NodeType::Scene)
+    {
+    }
+
     NodeFunc::NodeFunc(Token token, KeywordType modifier)
         : Node(NodeType::Function), name(token.content), modifier(modifier), token(token)
     {
@@ -403,6 +407,50 @@ namespace diannex
         Scene/function statements
     */
 
+    template<typename T>
+    static void parseFlagDefinitions(Parser* parser, T* node)
+    {
+        if (parser->isNextToken(TokenType::Colon))
+        {
+            std::unordered_set<std::string> flagNames;
+            do
+            {
+                parser->advance();
+                parser->skipNewlines();
+
+                Token name = parser->ensureToken(TokenType::Identifier);
+                parser->skipNewlines();
+
+                if (flagNames.find(name.content) != flagNames.end())
+                    parser->errors.push_back({ ParseError::ErrorType::DuplicateFlagName, name.line, name.column });
+                else
+                    flagNames.insert(name.content);
+
+                NodeContent* flag = new NodeContent(name, Node::NodeType::Flag);
+
+                parser->ensureToken(TokenType::OpenParen);
+                parser->skipNewlines();
+
+                flag->nodes.push_back(Node::ParseExpression(parser));
+                parser->skipNewlines();
+
+                if (parser->isNextToken(TokenType::Comma))
+                {
+                    parser->advance();
+                    parser->skipNewlines();
+
+                    flag->nodes.push_back(Node::ParseExpression(parser));
+                    parser->skipNewlines();
+                }
+
+                parser->ensureToken(TokenType::CloseParen);
+                parser->skipNewlines();
+
+                node->flags.push_back(flag);
+            } while (parser->isNextToken(TokenType::Comma));
+        }
+    }
+
     Node* Node::ParseFunctionBlock(Parser* parser, Token name, KeywordType modifier)
     {
         NodeFunc* res = new NodeFunc(name, modifier);
@@ -425,6 +473,8 @@ namespace diannex
         parser->ensureToken(TokenType::CloseParen);
 
         parser->skipNewlines();
+
+        parseFlagDefinitions(parser, res);
 
         // Parse block
         parser->ensureToken(TokenType::OpenCurly);
@@ -467,7 +517,9 @@ namespace diannex
 
     Node* Node::ParseSceneBlock(Parser* parser, Token name)
     {
-        NodeContent* res = new NodeContent(name, NodeType::Scene);
+        NodeScene* res = new NodeScene(name);
+
+        parseFlagDefinitions(parser, res);
 
         parser->ensureToken(TokenType::OpenCurly);
 

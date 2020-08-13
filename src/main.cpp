@@ -338,6 +338,9 @@ int main(int argc, char** argv)
                 case ParseError::ErrorType::ChoiceWithoutStatement:
                     std::cout << "Choice statement without any sub-statements." << std::endl;
                     break;
+                case ParseError::ErrorType::DuplicateFlagName:
+                    std::cout << "Duplicate flag names." << std::endl;
+                    break;
                 }
             }
 

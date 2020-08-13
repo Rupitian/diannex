@@ -20,7 +20,8 @@ namespace diannex
             UnexpectedSwitchCase,
             UnexpectedSwitchDefault,
             ChooseWithoutStatement,
-            ChoiceWithoutStatement
+            ChoiceWithoutStatement,
+            DuplicateFlagName
         };
 
         ErrorType type;
@@ -99,6 +100,9 @@ namespace diannex
             Scene,
             Definitions,
             Function,
+
+            // Special
+            Flag,
 
             // Scene-scope
             SceneBlock,
@@ -227,6 +231,16 @@ namespace diannex
         NodeTokenModifier(const NodeTokenModifier&) = delete;
     };
 
+    class NodeScene : public NodeContent
+    {
+    public:
+        NodeScene(Token token);
+
+        std::vector<NodeContent*> flags;
+    private:
+        NodeScene(const NodeScene&) = delete;
+    };
+
     class NodeFunc : public Node
     {
     public:
@@ -237,6 +251,7 @@ namespace diannex
         Token token;
         KeywordType modifier;
         std::vector<Token> args;
+        std::vector<NodeContent*> flags;
     private:
         NodeFunc(const NodeFunc&) = delete;
     };
