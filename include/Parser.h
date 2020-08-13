@@ -147,13 +147,13 @@ namespace diannex
         static Node* ParseNamespaceBlock(Parser* parser, std::string name);
         static Node* ParseGroupStatement(Parser* parser, KeywordType modifier);
 
-        static Node* ParseDefinitionBlock(Parser* parser, std::string name);
+        static Node* ParseDefinitionBlock(Parser* parser, Token name);
         static Node* ParseDefinitionStatement(Parser* parser);
 
-        static Node* ParseFunctionBlock(Parser* parser, std::string name, KeywordType modifier);
+        static Node* ParseFunctionBlock(Parser* parser, Token name, KeywordType modifier);
         
         static Node* ParseSceneBlock(Parser* parser);
-        static Node* ParseSceneBlock(Parser* parser, std::string name);
+        static Node* ParseSceneBlock(Parser* parser, Token name);
         static Node* ParseSceneStatement(Parser* parser, KeywordType modifier, bool inSwitch = false);
         static Node* ParseVariable(Parser* parser);
         static Node* ParseFunction(Parser* parser, bool parentheses = true);
@@ -183,9 +183,11 @@ namespace diannex
     class NodeContent : public Node
     {
     public:
+        NodeContent(Token token, NodeType type);
         NodeContent(std::string content, NodeType type);
 
         std::string content;
+        Token token;
     private:
         NodeContent(const NodeContent&) = delete;
     };
@@ -228,9 +230,11 @@ namespace diannex
     class NodeFunc : public Node
     {
     public:
+        NodeFunc(Token token, KeywordType modifier);
         NodeFunc(std::string name, KeywordType modifier);
 
         std::string name;
+        Token token;
         KeywordType modifier;
         std::vector<Token> args;
     private:

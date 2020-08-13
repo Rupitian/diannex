@@ -261,7 +261,11 @@ namespace diannex
             delete s;
     }
 
-    NodeContent::NodeContent(std::string content, NodeType type) : Node(type), content(content)
+    NodeContent::NodeContent(Token token, NodeType type) : Node(type), content(token.content), token(token)
+    {
+    }
+
+    NodeContent::NodeContent(std::string content, NodeType type) : Node(type), content(content), token(Token(TokenType::Error, 0, 0, content))
     {
     }
 
@@ -285,8 +289,13 @@ namespace diannex
     {
     }
 
+    NodeFunc::NodeFunc(Token token, KeywordType modifier)
+        : Node(NodeType::Function), name(token.content), modifier(modifier), token(token)
+    {
+    }
+
     NodeFunc::NodeFunc(std::string name, KeywordType modifier)
-        : Node(NodeType::Function), name(name), modifier(modifier)
+        : Node(NodeType::Function), name(name), modifier(modifier), token(TokenType::Error, 0, 0, name)
     {
     }
 
@@ -351,14 +360,14 @@ namespace diannex
                         case KeywordType::Namespace:
                             return Node::ParseNamespaceBlock(parser, name.content);
                         case KeywordType::Scene:
-                            return Node::ParseSceneBlock(parser, name.content);
+                            return Node::ParseSceneBlock(parser, name);
                         case KeywordType::Def:
-                            return Node::ParseDefinitionBlock(parser, name.content);
+                            return Node::ParseDefinitionBlock(parser, name);
                         }
                     }
                     else
                     {
-                        return Node::ParseFunctionBlock(parser, name.content, modifier);
+                        return Node::ParseFunctionBlock(parser, name, modifier);
                     }
                 }
                 else
@@ -379,7 +388,7 @@ namespace diannex
             if (modifier != KeywordType::None)
                 parser->errors.push_back({ ParseError::ErrorType::UnexpectedModifierFor, t.line, t.column, tokenToString(t) });
             parser->advance();
-            return new NodeContent(t.content, NodeType::MarkedComment);
+            return new NodeContent(t, NodeType::MarkedComment);
 
         default:
             parser->errors.push_back({ ParseError::ErrorType::UnexpectedToken, t.line, t.column, tokenToString(t) });
@@ -394,7 +403,7 @@ namespace diannex
         Scene/function statements
     */
 
-    Node* Node::ParseFunctionBlock(Parser* parser, std::string name, KeywordType modifier)
+    Node* Node::ParseFunctionBlock(Parser* parser, Token name, KeywordType modifier)
     {
         NodeFunc* res = new NodeFunc(name, modifier);
 
@@ -456,7 +465,7 @@ namespace diannex
         return res;
     }
 
-    Node* Node::ParseSceneBlock(Parser* parser, std::string name)
+    Node* Node::ParseSceneBlock(Parser* parser, Token name)
     {
         NodeContent* res = new NodeContent(name, NodeType::Scene);
 
@@ -960,7 +969,7 @@ namespace diannex
                 return Node::ParseSceneStatement(parser, t.keywordType);
             case TokenType::MarkedComment:
                 parser->advance();
-                return new NodeContent(t.content, NodeType::MarkedComment);
+                return new NodeContent(t, NodeType::MarkedComment);
             case TokenType::OpenCurly:
                 return Node::ParseSceneBlock(parser);
             case TokenType::Semicolon:
@@ -981,7 +990,7 @@ namespace diannex
         Token name = parser->ensureToken(TokenType::Identifier);
         if (name.type != TokenType::Error)
         {
-            NodeContent* res = new NodeContent(name.content, NodeType::Variable);
+            NodeContent* res = new NodeContent(name, NodeType::Variable);
 
             // Array index parse
             parser->skipNewlines();
@@ -1004,7 +1013,7 @@ namespace diannex
         Token name = parser->ensureToken(TokenType::Identifier);
         if (name.type != TokenType::Error)
         {
-            NodeContent* res = new NodeContent(name.content, NodeType::SceneFunction);
+            NodeContent* res = new NodeContent(name, NodeType::SceneFunction);
 
             if (parentheses)
             {
@@ -1556,7 +1565,7 @@ namespace diannex
         Definitions statements
     */
 
-    Node* Node::ParseDefinitionBlock(Parser* parser, std::string name)
+    Node* Node::ParseDefinitionBlock(Parser* parser, Token name)
     {
         NodeContent* res = new NodeContent(name, NodeType::Definitions);
 

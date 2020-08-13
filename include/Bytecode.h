@@ -23,7 +23,7 @@ namespace diannex
         ErrorType type;
         uint32_t line;
         uint16_t column;
-        const char* info1;
+        std::string info1;
     };
 
     struct BytecodeResult

@@ -130,10 +130,11 @@ namespace diannex
                 break;
             case Node::NodeType::Scene:
             {
-                ctx->symbolStack.push_back(((NodeContent*)n)->content);
+                NodeContent* nc = ((NodeContent*)n);
+                ctx->symbolStack.push_back(nc->content);
                 const std::string& symbol = expandSymbol(ctx);
                 if (ctx->sceneBytecode.count(symbol))
-                    res->errors.push_back({ BytecodeError::ErrorType::SceneAlreadyExists, 0, 0, symbol.c_str() });
+                    res->errors.push_back({ BytecodeError::ErrorType::SceneAlreadyExists, nc->token.line, nc->token.column, std::string(symbol) });
                
                 int pos = ctx->bytecode.size();
                 ctx->generatingFunction = false;
@@ -157,7 +158,7 @@ namespace diannex
                 ctx->symbolStack.push_back(func->name);
                 const std::string& symbol = expandSymbol(ctx);
                 if (ctx->functionBytecode.count(symbol))
-                    res->errors.push_back({ BytecodeError::ErrorType::FunctionAlreadyExists, 0, 0, symbol.c_str() });
+                    res->errors.push_back({ BytecodeError::ErrorType::FunctionAlreadyExists, func->token.line, func->token.column, std::string(symbol) });
                 int pos = ctx->bytecode.size();
                 ctx->generatingFunction = true;
 
@@ -181,10 +182,11 @@ namespace diannex
             }
             case Node::NodeType::Definitions:
             {
-                ctx->symbolStack.push_back(((NodeContent*)n)->content);
+                NodeContent* nc = ((NodeContent*)n);
+                ctx->symbolStack.push_back(nc->content);
                 const std::string& symbol = expandSymbol(ctx);
                 if (!ctx->definitions.insert(symbol).second)
-                    res->errors.push_back({ BytecodeError::ErrorType::DefinitionBlockAlreadyExists, 0, 0, symbol.c_str() });
+                    res->errors.push_back({ BytecodeError::ErrorType::DefinitionBlockAlreadyExists, nc->token.line, nc->token.column, std::string(symbol) });
 
                 // Iterate over all of the definitions, and generate proper info
                 for (Node* subNode : n->nodes)
@@ -294,7 +296,7 @@ namespace diannex
             {
                 ctx->localCountStack.back()++;
                 if (std::find(ctx->localStack.begin(), ctx->localStack.end(), var->content) != ctx->localStack.end())
-                    res->errors.push_back({ BytecodeError::ErrorType::LocalVariableAlreadyExists, assign->token.line, assign->token.column, var->content.c_str() });
+                    res->errors.push_back({ BytecodeError::ErrorType::LocalVariableAlreadyExists, assign->token.line, assign->token.column, std::string(var->content) });
                 localId = ctx->localStack.size();
                 ctx->localStack.push_back(var->content);
             }
