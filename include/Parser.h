@@ -1,7 +1,9 @@
 #ifndef DIANNEX_PARSER_H
 #define DIANNEX_PARSER_H
 
+#include "Context.h"
 #include "Lexer.h"
+#include "ParseResult.h"
 
 #include <memory>
 
@@ -29,21 +31,6 @@ namespace diannex
         uint16_t column;
         const char* info1;
         const char* info2;
-    };
-
-    struct ParseResult
-    {
-        class Node* baseNode;
-        std::vector<ParseError> errors;
-        bool doDelete = true;
-
-        ~ParseResult()
-        {
-            if (doDelete)
-                delete baseNode;
-        }
-
-        ParseResult(const ParseResult&) = delete;
     };
 
     class Parser

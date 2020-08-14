@@ -10,7 +10,9 @@
 #include <algorithm>
 
 #include "Instruction.h"
+#include "Token.h"
 #include "Project.h"
+#include "ParseResult.h"
 
 namespace diannex
 {
@@ -34,8 +36,8 @@ namespace diannex
         std::queue<std::string> queue;
         std::string currentFile;
         std::unordered_set<std::string> files;
-        std::vector<std::pair<std::string, std::vector<struct Token>>> tokenList;
-        std::vector<std::pair<std::string, struct ParseResult*>> parseList;
+        std::vector<std::pair<std::string, std::vector<Token>>> tokenList;
+        std::vector<std::pair<std::string, ParseResult*>> parseList;
         std::unordered_map<std::string, std::vector<int>> sceneBytecode;
         std::unordered_map<std::string, std::vector<int>> functionBytecode;
         std::unordered_set<std::string> definitions;
@@ -50,21 +52,9 @@ namespace diannex
         std::vector<TranslationInfo> translationInfo;
         bool generatingFunction = false;
 
-        ~CompileContext()
-        {
-            for (auto it = parseList.begin(); it != parseList.end(); it++)
-            {
-                delete it->second;
-            }
-        }
+        ~CompileContext();
 
-        int string(std::string str)
-        {
-            int res = std::find(internalStrings.begin(), internalStrings.end(), str) - internalStrings.begin();
-            if (res == internalStrings.size())
-                internalStrings.push_back(str);
-            return res;
-        }
+        int string(std::string str);
     };
 }
 	

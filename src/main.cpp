@@ -15,6 +15,7 @@
 #include "Context.h"
 #include "Binary.h"
 #include "Translation.h"
+#include "ParseResult.h"
 
 using namespace diannex;
 namespace fs = std::filesystem;

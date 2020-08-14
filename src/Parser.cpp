@@ -1,9 +1,16 @@
 #include "Parser.h"
+#include "ParseResult.h"
 
 #include <sstream>
 
 namespace diannex
 {
+    ParseResult::~ParseResult()
+    {
+        if (doDelete)
+            delete baseNode;
+    }
+
     /*
         Base parser
     */
