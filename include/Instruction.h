@@ -165,6 +165,7 @@ namespace diannex
             case Opcode::choiceaddt:
             case Opcode::chooseadd:
             case Opcode::chooseaddt:
+            case Opcode::makearr:
                 bw->WriteInt32(arg);
                 break;
             case Opcode::call:
