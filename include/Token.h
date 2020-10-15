@@ -14,6 +14,8 @@ namespace diannex
         MarkedString, // @" and then continue like String
         ExcludeString, // !" and then continue like String
 
+        Undefined, // An Identifier called "undefined"
+
         GroupKeyword, // These are reserved identifiers, documented in below enum
         MainKeyword,
         MainSubKeyword,

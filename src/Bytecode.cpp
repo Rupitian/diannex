@@ -1001,6 +1001,9 @@ namespace diannex
                     ctx->bytecode.push_back(Instruction::make_int2(Instruction::Opcode::pushints, translationInfo(ctx, constant->token.content), constant->nodes.size()));
                 }
                 break;
+            case TokenType::Undefined:
+                ctx->bytecode.emplace_back(Instruction::Opcode::pushu);
+                break;
             }
             break;
         }

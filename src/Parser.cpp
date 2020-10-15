@@ -1486,6 +1486,7 @@ namespace diannex
             {
             case TokenType::Number:
             case TokenType::Percentage:
+            case TokenType::Undefined:
                 parser->advance();
                 return new NodeToken(NodeType::ExprConstant, t);
             case TokenType::String:

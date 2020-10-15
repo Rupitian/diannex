@@ -758,6 +758,8 @@ namespace diannex
                                 out.emplace_back(TokenType::Number, line, col, "0");
                             else if (identifier->compare("true") == 0)
                                 out.emplace_back(TokenType::Number, line, col, "1");
+                            else if (identifier->compare("undefined") == 0)
+                                out.emplace_back(TokenType::Undefined, line, col, "undefined");
                             else
                                 out.emplace_back(TokenType::Identifier, line, col, *identifier.get());
                         }
