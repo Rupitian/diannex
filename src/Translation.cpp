@@ -90,7 +90,8 @@ namespace diannex
             }
         }
 
-        GeneratePublicFile(out, &ctx);
+        for (auto it = ctx.translationInfo.begin(); it != ctx.translationInfo.end(); ++it)
+            out << it->text << "\n";
     }
 
     std::string Translation::SanitizeString(const std::string& str)

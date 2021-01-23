@@ -17,6 +17,8 @@ x64/
 x86/
 Debug/
 Release/
+build32/
+build64/
 build/
 out/
 .vscode/
