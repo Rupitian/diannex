@@ -327,7 +327,7 @@ namespace diannex
 
         parser->skipNewlines();
 
-        while (parser->isMore() && !parser->isNextToken(TokenType::CloseCurly))
+        while (parser->isMore() && (!isNamespace || !parser->isNextToken(TokenType::CloseCurly)))
         {
             res->nodes.push_back(Node::ParseGroupStatement(parser, KeywordType::None));
             parser->skipNewlines();
@@ -1539,6 +1539,20 @@ namespace diannex
                 parser->advance();
                 parser->skipNewlines();
                 Node* expr = Node::ParseExprLast(parser);
+                if (expr->type == NodeType::ExprConstant)
+                {
+                    NodeToken* exprToken = (NodeToken*)expr;
+                    if (exprToken->token.type == TokenType::Number ||
+                        exprToken->token.type == TokenType::Percentage)
+                    {
+                        // This is something like -(1) or - 1, so optimize it
+                        if (exprToken->token.content.front() == '-')
+                            exprToken->token.content = exprToken->token.content.substr(1); // negating something that's already negative...
+                        else
+                            exprToken->token.content = "-" + exprToken->token.content;
+                        return exprToken;
+                    }
+                }
                 Node* res = new Node(NodeType::ExprNegate);
                 res->nodes.push_back(expr);
                 return res;

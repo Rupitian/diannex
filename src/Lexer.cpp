@@ -197,6 +197,47 @@ namespace diannex
 
             return std::make_unique<std::string>(code.substr(base, position - base));
         }
+
+        void readNumber(char curr, const std::string& in, std::vector<Token>& out)
+        {
+            uint32_t startLine = line;
+            uint16_t startCol = column;
+
+            uint32_t base = position;
+
+            if (curr == '-')
+            {
+                advanceChar();
+                curr = peekChar();
+            }
+
+            bool foundSeparator = (curr == '.'), foundNumber = (curr >= '0' && curr <= '9'), isPercent = false;
+            advanceChar();
+
+            while (position < length)
+            {
+                curr = readChar();
+                if (foundNumber && curr == '%')
+                {
+                    isPercent = true;
+                    break;
+                }
+                else if (((curr != '.') && curr < '0' || curr > '9') || (foundSeparator && curr == '.'))
+                {
+                    backUpChar();
+                    break;
+                }
+                else if (curr == '.')
+                    foundSeparator = true;
+                else
+                    foundNumber = true;
+            }
+
+            if (isPercent)
+                out.emplace_back(TokenType::Percentage, startLine, startCol, in.substr(base, position - base - 1));
+            else
+                out.emplace_back(TokenType::Number, startLine, startCol, in.substr(base, position - base));
+        }
     private:
         std::string code;
 
@@ -376,36 +417,7 @@ namespace diannex
                 }
                 else if ((curr >= '0' && curr <= '9') || curr == '.') // Number or percentage
                 {
-                    uint32_t line = cr.line;
-                    uint16_t col = cr.column;
-
-                    uint32_t base = cr.position;
-                    bool foundSeparator = (curr == '.'), foundNumber = (curr >= '0' && curr <= '9'), isPercent = false;
-                    cr.advanceChar();
-
-                    while (cr.position < cr.length)
-                    {
-                        curr = cr.readChar();
-                        if (foundNumber && curr == '%')
-                        {
-                            isPercent = true;
-                            break;
-                        }
-                        else if (((curr != '.') && curr < '0' || curr > '9') || (foundSeparator && curr == '.'))
-                        {
-                            cr.backUpChar();
-                            break;
-                        }
-                        else if (curr == '.')
-                            foundSeparator = true;
-                        else
-                            foundNumber = true;
-                    }
-
-                    if (isPercent)
-                        out.emplace_back(TokenType::Percentage, line, col, in.substr(base, cr.position - base - 1));
-                    else
-                        out.emplace_back(TokenType::Number, line, col, in.substr(base, cr.position - base));
+                    cr.readNumber(curr, in, out);
                 }
                 else if (curr == '"' || cr.matchChars('@', '"') || cr.matchChars('!', '"')) // Strings
                 {
@@ -562,6 +574,11 @@ namespace diannex
                             {
                                 cr.advanceChar();
                                 out.emplace_back(TokenType::MinusEquals, line, col);
+                            }
+                            else if ((n >= '0' && n <= '9') || n == '.')
+                            {
+                                cr.readNumber(curr, in, out);
+                                continue; // skip advanceChar() call
                             }
                             else
                                 out.emplace_back(TokenType::Minus, line, col);
