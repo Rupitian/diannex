@@ -527,7 +527,7 @@ namespace diannex
                 // Chance
                 GenerateExpression(statement->nodes.at(i++), ctx, res);
 
-                // Require
+                // Require + add option
                 Node* r = statement->nodes.at(i++);
                 if (r->type == Node::NodeType::None)
                 {
@@ -545,13 +545,15 @@ namespace diannex
             // Actual branch paths
             int j = 0;
             std::vector<int> jumps;
-            for (int i = 4; i < statement->nodes.size(); i += 4)
+            int size = statement->nodes.size();
+            for (int i = 4; i < size; i += 4)
             {
                 patch(choices.at(j++), ctx);
                 pushLocalContext(ctx);
                 GenerateSceneStatement(statement->nodes.at(i), ctx, res);
                 popLocalContext(ctx);
-                jumps.push_back(patchInstruction(Instruction::Opcode::j, ctx));
+                if (i + 4 < size)
+                    jumps.push_back(patchInstruction(Instruction::Opcode::j, ctx));
             }
 
             // End location of the choice
@@ -567,7 +569,7 @@ namespace diannex
                 // Chance
                 GenerateExpression(statement->nodes.at(i++), ctx, res);
 
-                // Require
+                // Require + add option
                 Node* r = statement->nodes.at(i++);
                 if (r->type == Node::NodeType::None)
                 {
@@ -585,13 +587,15 @@ namespace diannex
             // Actual branch paths
             int j = 0;
             std::vector<int> jumps;
-            for (int i = 2; i < statement->nodes.size(); i += 3)
+            int size = statement->nodes.size();
+            for (int i = 2; i < size; i += 3)
             {
                 patch(choices.at(j++), ctx);
                 pushLocalContext(ctx);
                 GenerateSceneStatement(statement->nodes.at(i), ctx, res);
                 popLocalContext(ctx);
-                jumps.push_back(patchInstruction(Instruction::Opcode::j, ctx));
+                if (i + 3 < size)
+                    jumps.push_back(patchInstruction(Instruction::Opcode::j, ctx));
             }
 
             // End location of the choice
