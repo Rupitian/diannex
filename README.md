@@ -110,7 +110,7 @@ The tool is a command-line application, with these options which can be seen sim
 ## Building
 This project uses [CMake](https://cmake.org/) to compile, but it also requires a C++ compiler with non-experimental C++17 support. (C++17 classes shouldn't be in the `std::experimental` namespace)
 
-If you have these requments satisfied, then you should just be able to compile with the following commands:
+If you have these requirments satisfied, then you should just be able to compile with the following commands:
 ```zsh
 $ mkdir build && cd build
 $ cmake ..
