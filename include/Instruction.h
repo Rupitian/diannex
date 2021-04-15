@@ -32,8 +32,8 @@ namespace diannex
             pushbints = 0x15, // Push internal binary interpolated string: [ID, expr count]
 
             makearr = 0x16, // Construct an array based off of stack: [size]
-            pusharrind = 0x17, // Extract a single value out of an array, removing the array as well (uses stack for index)
-            setarrind = 0x18, // Sets a value in an array on the top of the stack (uses stack for index and value)
+            pusharrind = 0x17, // Extract a single value out of an array, removing the array as well (top of stack is index, followed by actual array)
+            setarrind = 0x18, // Sets a value in an array on the top of the stack (top of stack is value, followed by index, followed by actual array)
 
             setvarglb = 0x19, // Set a global variable from the stack: [string name]
             setvarloc = 0x1A, // Set a local variable from the stack: [ID]
