@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <random>
 #include <libs/miniz/miniz.h>
+#include <set>
 
 namespace diannex
 {
@@ -15,10 +16,17 @@ namespace diannex
         return outSize;
     }
 
+    static int instructionOffset(int index, CompileContext* ctx)
+    {
+        if (index == -1)
+            return -1;
+        return ctx->bytecode.at(index).offset;
+    }
+
     bool Binary::Write(BinaryWriter* bw, CompileContext* ctx)
     {
         bw->WriteBytes("DNX", 3);
-        bw->WriteUInt8(2); // Version
+        bw->WriteUInt8(3); // Version
 
         // Flags
         bool compressed = ctx->project->options.compression,
@@ -38,7 +46,7 @@ namespace diannex
             int size = it->second.size();
             bmw.WriteUInt16(size);
             for (int i = 0; i < size; i++)
-                bmw.WriteInt32(it->second.at(i));
+                bmw.WriteInt32(instructionOffset(it->second.at(i), ctx));
         }
 
         // Function metadata
@@ -52,7 +60,7 @@ namespace diannex
             int size = it->second.size();
             bmw.WriteUInt16(size);
             for (int i = 0; i < size; i++)
-                bmw.WriteInt32(it->second.at(i));
+                bmw.WriteInt32(instructionOffset(it->second.at(i), ctx));
         }
 
         // Definition metadata
@@ -71,11 +79,14 @@ namespace diannex
                 bmw.WriteUInt32(ctx->string(std::get<std::string>(p.first)) | (1 << 31));
 
             // Bytecode index
-            bmw.WriteInt32(p.second);
+            bmw.WriteInt32(instructionOffset(p.second, ctx));
         }
 
+        std::set<int> externalFunctions{};
+        int externalFunctionIndex = 0;
+
         // Bytecode
-        bmw.WriteUInt32(ctx->bytecode.size());
+        bmw.WriteUInt32(ctx->offset);
         for (auto it = ctx->bytecode.begin(); it != ctx->bytecode.end(); ++it)
         {
             if (it->opcode == Instruction::Opcode::PATCH_CALL)
@@ -117,7 +128,9 @@ namespace diannex
                         // Unable to find, so must be external
                         it->opcode = Instruction::Opcode::callext;
                         int32_t temp = it->count;
-                        it->arg = ctx->string(funcName);
+                        int str = ctx->string(funcName);
+                        externalFunctions.insert(str);
+                        it->arg = str;
                         it->arg2 = temp;
                     }
                 }
@@ -143,6 +156,11 @@ namespace diannex
                 if (!it->isComment)
                     bmw.WriteString(it->text);
         }
+
+        // External function list
+        bmw.WriteUInt32(externalFunctions.size());
+        for (auto it = externalFunctions.begin(); it != externalFunctions.end(); ++it)
+            bmw.WriteUInt32(*it);
 
         uint32_t size = bmw.GetSize();
         if (compressed)

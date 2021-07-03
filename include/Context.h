@@ -27,7 +27,7 @@ namespace diannex
     {
         std::vector<int> continuePatch;
         std::vector<int> endLoopPatch;
-        std::vector<Instruction> returnCleanup;
+        std::vector<Instruction::Opcode> returnCleanup;
     };
 
     struct CompileContext
@@ -51,6 +51,7 @@ namespace diannex
         int translationStringIndex = 0;
         std::vector<TranslationInfo> translationInfo;
         bool generatingFunction = false;
+        int offset = 0;
 
         ~CompileContext();
 

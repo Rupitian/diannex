@@ -70,7 +70,7 @@ namespace diannex
             cmpneq = 0x35, // ditto, not equal
 
             // Control flow
-            j = 0x40, // Jumps to an instruction [int relative address]
+            j = 0x40, // Jumps to an instruction [int relative address from end of instruction]
             jt = 0x41, // ditto, but if the value on the top of the stack is truthy (which it pops off)
             jf = 0x42, // ditto, but if the value on the top of the stack is NOT truthy (which it pops off)
             exit = 0x43, // Exits the current stack frame
@@ -80,12 +80,12 @@ namespace diannex
 
             choicebeg = 0x47, // Switches to the choice state in the interpreter- no other choices can run and
                               // only one textrun can execute until after choicesel is executed
-            choiceadd = 0x48, // Adds a choice, using the stack for the text and the % chance of appearing [int relative jump address]
-            choiceaddt = 0x49, // ditto, but also if an additional stack value is truthy [int relative jump address]
+            choiceadd = 0x48, // Adds a choice, using the stack for the text and the % chance of appearing [int relative jump address from end of instruction]
+            choiceaddt = 0x49, // ditto, but also if an additional stack value is truthy [int relative jump address from end of instruction]
             choicesel = 0x4A, // Pauses the interpreter, waiting for user input to select one of the choices, then jumps to one of them, resuming
 
-            chooseadd = 0x4B, // Adds a new address to one of the possible next statements, using stack for chances [int relative jump address] (to the current stack frame)
-            chooseaddt = 0x4C, // ditto, but also if an additional stack value is truthy [int relative jump address]
+            chooseadd = 0x4B, // Adds a new address to one of the possible next statements, using stack for chances [int relative jump address from end of instruction] (to the current stack frame)
+            chooseaddt = 0x4C, // ditto, but also if an additional stack value is truthy [int relative jump address from end of instruction]
             choosesel = 0x4D, // Jumps to one of the choices, using the addresses and chances/requirement values on the stack
 
             textrun = 0x4E, // Pauses the interpreter, running a line of text from the stack
@@ -111,37 +111,58 @@ namespace diannex
             double_t argDouble;
         };
 
-        inline Instruction(Opcode opcode) : opcode(opcode)
+        int32_t offset;
+
+        inline Instruction(Opcode opcode)
         {
+            this->opcode = opcode;
         }
 
-        static inline Instruction make_int(Opcode opcode, int32_t arg)
+        inline Instruction(int32_t* offset, Opcode opcode)
         {
-            Instruction res = Instruction(opcode);
+            this->opcode = opcode;
+            if (offset != nullptr)
+            {
+                this->offset = *offset;
+                *offset += 1;
+            }
+        }
+
+        static inline Instruction make_int(int32_t* offset, Opcode opcode, int32_t arg)
+        {
+            Instruction res = Instruction(offset, opcode);
             res.arg = arg;
+            if (offset != nullptr)
+                *offset += 4;
             return res;
         }
 
-        static inline Instruction make_int2(Opcode opcode, int32_t arg, int32_t arg2)
+        static inline Instruction make_int2(int32_t* offset, Opcode opcode, int32_t arg, int32_t arg2)
         {
-            Instruction res = Instruction(opcode);
+            Instruction res = Instruction(offset, opcode);
             res.arg = arg;
             res.arg2 = arg2;
+            if (offset != nullptr)
+                *offset += 8;
             return res;
         }
 
-        static inline Instruction make_double(Opcode opcode, double_t arg)
+        static inline Instruction make_double(int32_t* offset, Opcode opcode, double_t arg)
         {
-            Instruction res = Instruction(opcode);
+            Instruction res = Instruction(offset, opcode);
             res.argDouble = arg;
+            if (offset != nullptr)
+                *offset += 8;
             return res;
         }
 
-        static inline Instruction make_patch_call(int32_t count, std::vector<std::string>* vec)
+        static inline Instruction make_patch_call(int32_t* offset, int32_t count, std::vector<std::string>* vec)
         {
-            Instruction res = Instruction(Opcode::PATCH_CALL);
+            Instruction res = Instruction(offset, Opcode::PATCH_CALL);
             res.count = count;
             res.vec = vec;
+            if (offset != nullptr)
+                *offset += 8;
             return res;
         }
 

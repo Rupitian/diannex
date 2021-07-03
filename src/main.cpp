@@ -404,6 +404,9 @@ int main(int argc, char** argv)
                 case BytecodeError::ErrorType::StatementsBeforeSwitchCase:
                     std::cout << "Statements present before any cases in switch statement." << std::endl;
                     break;
+                case BytecodeError::ErrorType::UnexpectedError:
+                    std::cout << "Unexpected error. May be invalid syntax." << std::endl;
+                    break;
                 }
             }
         }
