@@ -11,7 +11,7 @@ Diannex operates on a per-project basis, requiring either an (auto-generated) JS
 2. Export Diannex to a location on your computer.
 3. Open the command prompt and navigate to the directory where you exported Diannex (or add it to your PATH).
 4. Execute `diannex --generate` to generate a new project. You can rename the file if you wish.
-5. Create a new file in the same directory as the generated project file called "myfile.dx" and add the code from [Appendix A](#appendix). Save the file.
+5. Create a new file in the same directory as the generated project file called "myfile.dx" and add the code from [Appendix A](#a-hello-work). Save the file.
 7. Open the generated project file and add the relative path to "myfile.dx" (if it's in the same directory, "myfile.dx" is enough) to the "files" array. Save the file.
 8. Go back to the command prompt and execute `diannex --project <project file name>` to create the binary file. More usage [here](#usage).
 9. Congratulations! You now have a binary file which can be loaded into your game or application.
@@ -215,7 +215,7 @@ If you're using a compiler that requires linking a library for std::filesystem (
 [MadCreativity](https://github.com/aam051102)
 
 ## Appendix
-### A
+### A - Hello world
 ```c
 scene intro {
   narrator: "Hello, world."
