@@ -11,10 +11,10 @@ Diannex operates on a per-project basis, requiring either an (auto-generated) JS
 2. Export Diannex to a location on your computer.
 3. Open the command prompt and navigate to the directory where you exported Diannex (or add it to your PATH).
 4. Execute `diannex --generate` to generate a new project. You can rename the file if you wish.
-5. Create a new file in the same directory as the generated project file called "myfile.dx" and add the code from the [basic language sample](#basic-language-sample). Save the file.
+5. Create a new file in the same directory as the generated project file called "myfile.dx" and add the code from [Appendix A](#appendix). Save the file.
 7. Open the generated project file and add the relative path to "myfile.dx" (if it's in the same directory, "myfile.dx" is enough) to the "files" array. Save the file.
 8. Go back to the command prompt and execute `diannex --project <project file name>` to create the binary file. More usage [here](#usage).
-9. Congratulations! You now have a private binary file which can be loaded into your game or application.
+9. Congratulations! You now have a binary file which can be loaded into your game or application.
 
 ## Basic language sample
 ```c
@@ -153,16 +153,13 @@ External function list:
   ID - UInt32
 ```
 
-## Further documentation
-TODO
-
 ## Usage
 The tool is a command-line application, with these options which can be seen simply by running with `--help`.
 ```
   diannex [OPTION...] <files>
 
-  -p, --project arg             Load project file
-  -g, --generate [=arg(=DiannexTesting)]
+  -p, --project <path>          Load project file
+  -g, --generate [=path(=DiannexTesting)]
                                 Generate new project file
       --convert                 Convert a private file to the public format
   -c, --cli                     Don't use a project file and read commands
@@ -170,8 +167,8 @@ The tool is a command-line application, with these options which can be seen sim
   -h, --help                    Shows this message
 
  Conversion options:
-      --in arg   Path to private input file
-      --out arg  Path to public output file
+      --in <path>               Path to private input file
+      --out <path>              Path to public output file
 
  Project options:
   -b, --binary (default: "./out")
@@ -216,3 +213,11 @@ If you're using a compiler that requires linking a library for std::filesystem (
 [PeriBooty](https://github.com/PeriBooty)
 
 [MadCreativity](https://github.com/aam051102)
+
+## Appendix
+### A
+```c
+scene intro {
+  narrator: "Hello, world."
+}
+```
