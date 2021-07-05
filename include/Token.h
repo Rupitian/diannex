@@ -31,6 +31,7 @@ namespace diannex
         Colon, // :
         Comma, // ,
         Ternary, // ?
+        Range, // ..
 
         VariableStart, // $
 
@@ -106,6 +107,7 @@ namespace diannex
         Return,
         Case,
         Default,
+        Sequence,
 
         // Choice/choose scope
         Require,

@@ -217,6 +217,22 @@ namespace diannex
             while (position < length)
             {
                 curr = readChar();
+
+                // Check for ".." (range)
+                if (curr == '.' && position < length)
+                {
+                    if (readChar() == '.')
+                    {
+                        backUpChar();
+                        backUpChar();
+                        break;
+                    }
+                    else
+                    {
+                        backUpChar();
+                    }
+                }
+
                 if (foundNumber && curr == '%')
                 {
                     isPercent = true;
@@ -415,9 +431,24 @@ namespace diannex
                         out.emplace_back(TokenType::Error, line, col);
                     }
                 }
-                else if ((curr >= '0' && curr <= '9') || curr == '.') // Number or percentage
+                else if ((curr >= '0' && curr <= '9') || curr == '.') // Number, percentage, or range
                 {
-                    cr.readNumber(curr, in, out);
+                    bool isRange = false;
+                    if (curr == '.' && cr.position + 1 < cr.length)
+                    {
+                        if (cr.peekCharNext() == '.')
+                        {
+                            isRange = true;
+                        }
+                    }
+
+                    if (isRange)
+                    {
+                        out.emplace_back(TokenType::Range, cr.line, cr.column);
+                        cr.advanceChar(2);
+                    }
+                    else
+                        cr.readNumber(curr, in, out);
                 }
                 else if (curr == '"' || cr.matchChars('@', '"') || cr.matchChars('!', '"')) // Strings
                 {
@@ -765,6 +796,8 @@ namespace diannex
                                 out.emplace_back(TokenType::MainKeyword, line, col, KeywordType::Case);
                             else if (identifier->compare("default") == 0)
                                 out.emplace_back(TokenType::MainKeyword, line, col, KeywordType::Default);
+                            else if (identifier->compare("sequence") == 0)
+                                out.emplace_back(TokenType::MainKeyword, line, col, KeywordType::Sequence);
                             else if (identifier->compare("require") == 0)
                                 out.emplace_back(TokenType::MainSubKeyword, line, col, KeywordType::Require);
                             else if (identifier->compare("local") == 0)

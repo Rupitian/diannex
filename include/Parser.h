@@ -116,6 +116,9 @@ namespace diannex
             Return,
             Choose,
             Choice,
+            Sequence,
+            Subsequence,
+            SwitchSimple,
 
             ExprConstant,
             ExprNot,
@@ -129,6 +132,7 @@ namespace diannex
             ExprPreDecrement,
             ExprPostDecrement,
             ExprAccessArray,
+            ExprRange,
 
             // Definitions-scope
             Definition

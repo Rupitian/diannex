@@ -28,6 +28,7 @@ namespace diannex
         std::vector<int> continuePatch;
         std::vector<int> endLoopPatch;
         std::vector<Instruction::Opcode> returnCleanup;
+        int localCountStackIndex;
     };
 
     struct CompileContext

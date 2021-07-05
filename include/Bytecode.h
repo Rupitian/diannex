@@ -40,6 +40,7 @@ namespace diannex
         static void GenerateBlock(Node* block, CompileContext* ctx, BytecodeResult* res);
         static void GenerateSceneBlock(Node* block, CompileContext* ctx, BytecodeResult* res);
         static void GenerateSceneStatement(Node* statement, CompileContext* ctx, BytecodeResult* res);
+        static void GenerateBasicAssign(NodeContent* variable, CompileContext* ctx, BytecodeResult* res);
         
         static void GenerateExpression(Node* expr, CompileContext* ctx, BytecodeResult* res);
     private:

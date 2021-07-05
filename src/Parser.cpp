@@ -943,6 +943,95 @@ namespace diannex
                     parser->ensureToken(TokenType::OpenCurly); 
                     parser->skipNewlines();
                     parser->skipSemicolons();
+
+                    if (parser->isMore())
+                    {
+                        Token next = parser->peekToken();
+                        if (next.type != TokenType::MainKeyword ||
+                            (next.keywordType != KeywordType::Case && next.keywordType != KeywordType::Default))
+                        {
+                            // This is a "simple" switch statement; parse it
+                            res->type = NodeType::SwitchSimple;
+
+                            bool parsing = true;
+                            while (parsing && parser->isMore())
+                            {
+                                Token curr = parser->peekToken();
+                                switch (curr.type)
+                                {
+                                default:
+                                    // This is an expression to parse
+                                    if (curr.type == TokenType::Number)
+                                    {
+                                        // Deal with numbers in general, first
+                                        parser->storePosition();
+                                        parser->advance();
+                                        parser->skipNewlines();
+                                        if (parser->isMore() && parser->isNextToken(TokenType::Range))
+                                        {
+                                            // Parse range, with constant numbers
+                                            parser->advance();
+                                            parser->skipNewlines();
+                                            Token rangeEnd = parser->ensureToken(TokenType::Number);
+                                            parser->skipNewlines();
+                                            parser->ensureToken(TokenType::Colon);
+                                            Node* range = new Node(NodeType::ExprRange);
+                                            range->nodes.push_back(new NodeToken(NodeType::ExprConstant, curr));
+                                            range->nodes.push_back(new NodeToken(NodeType::ExprConstant, rangeEnd));
+                                            res->nodes.push_back(range);
+                                        }
+                                        else
+                                        {
+                                            // This is not a range, parse this as a normal expression
+                                            parser->restorePosition();
+                                            res->nodes.push_back(Node::ParseExpression(parser));
+                                            parser->skipNewlines();
+                                            parser->ensureToken(TokenType::Colon);
+                                        }
+
+                                        // Now parse statement
+                                        parser->skipNewlines();
+                                        res->nodes.push_back(Node::ParseSceneStatement(parser, KeywordType::None));
+                                    }
+                                    else
+                                    {
+                                        if (curr.type == TokenType::MainKeyword && curr.keywordType == KeywordType::Default)
+                                        {
+                                            // Default
+                                            res->nodes.push_back(new NodeToken(NodeType::SwitchDefault, curr));
+                                            parser->advance();
+                                        }
+                                        else
+                                        {
+                                            // Deal with everything else (normal expressions)
+                                            res->nodes.push_back(Node::ParseExpression(parser));
+                                        }
+
+                                        parser->skipNewlines();
+                                        parser->ensureToken(TokenType::Colon);
+
+                                        // Parse statement
+                                        parser->skipNewlines();
+                                        res->nodes.push_back(Node::ParseSceneStatement(parser, KeywordType::None));
+                                    }
+                                    parser->skipNewlines();
+                                    break;
+                                case TokenType::CloseCurly:
+                                    parser->advance();
+                                    parser->skipNewlines();
+                                    parsing = false;
+                                    break;
+                                case TokenType::Comma:
+                                    parser->advance();
+                                    parser->skipNewlines();
+                                    break;
+                                }
+                            }
+
+                            return res;
+                        }
+                    }
+
                     while (parser->isMore() && !parser->isNextToken(TokenType::CloseCurly))
                     {
                         res->nodes.push_back(Node::ParseSceneStatement(parser, KeywordType::None, true));
@@ -996,6 +1085,122 @@ namespace diannex
                             res->nodes.push_back(Node::ParseExpression(parser));
                     }
                     
+                    return res;
+                }
+                case KeywordType::Sequence:
+                {
+                    parser->advance();
+                    parser->skipNewlines();
+
+                    bool paren = false;
+                    if (parser->isMore() && parser->isNextToken(TokenType::OpenParen))
+                    {
+                        // Skip parentheses
+                        parser->advance();
+                        parser->skipNewlines();
+                        paren = true;
+                    }
+
+                    Node* value = Node::ParseVariable(parser);
+
+                    if (value == nullptr)
+                    {
+                        parser->synchronize();
+                        break;
+                    }
+
+                    parser->skipNewlines();
+                    if (paren)
+                    {
+                        parser->ensureToken(TokenType::CloseParen);
+                        parser->skipNewlines();
+                    }
+
+                    NodeToken* res = new NodeToken(NodeType::Sequence, t);
+                    res->nodes.push_back(value);
+
+                    Node* sub = new Node(NodeType::Subsequence);
+                    res->nodes.push_back(sub);
+
+                    parser->ensureToken(TokenType::OpenCurly);
+                    parser->skipNewlines();
+                    bool parsing = true;
+                    while (parsing && parser->isMore())
+                    {
+                        Token curr = parser->peekToken();
+                        switch (curr.type)
+                        {
+                        default:
+                            // This is an expression to parse
+                            if (curr.type == TokenType::Number)
+                            {
+                                // Deal with numbers in general, first
+                                parser->storePosition();
+                                parser->advance();
+                                parser->skipNewlines();
+                                if (parser->isMore() && parser->isNextToken(TokenType::Range))
+                                {
+                                    // Parse range, with constant numbers
+                                    parser->advance();
+                                    parser->skipNewlines();
+                                    Token rangeEnd = parser->ensureToken(TokenType::Number);
+                                    parser->skipNewlines();
+                                    parser->ensureToken(TokenType::Colon);
+                                    Node* range = new Node(NodeType::ExprRange);
+                                    range->nodes.push_back(new NodeToken(NodeType::ExprConstant, curr));
+                                    range->nodes.push_back(new NodeToken(NodeType::ExprConstant, rangeEnd));
+                                    sub->nodes.push_back(range);
+                                }
+                                else
+                                {
+                                    // This is not a range, parse this as a normal expression
+                                    parser->restorePosition();
+                                    sub->nodes.push_back(Node::ParseExpression(parser));
+                                    parser->skipNewlines();
+                                    parser->ensureToken(TokenType::Colon);
+                                }
+
+                                // Now parse statement
+                                parser->skipNewlines();
+                                sub->nodes.push_back(Node::ParseSceneStatement(parser, KeywordType::None));
+                            }
+                            else
+                            {
+                                // Deal with everything else (normal expressions)
+                                sub->nodes.push_back(Node::ParseExpression(parser));
+                                parser->skipNewlines();
+                                parser->ensureToken(TokenType::Colon);
+
+                                // Parse statement
+                                parser->skipNewlines();
+                                sub->nodes.push_back(Node::ParseSceneStatement(parser, KeywordType::None));
+                            }
+                            parser->skipNewlines();
+                            break;
+                        case TokenType::CloseCurly:
+                            parser->advance();
+                            parser->skipNewlines();
+                            if (parser->isMore() && parser->isNextToken(TokenType::Comma))
+                            {
+                                parser->advance();
+                                parser->skipNewlines();
+                                parser->ensureToken(TokenType::OpenCurly);
+                                parser->skipNewlines();
+                                sub = new Node(NodeType::Subsequence);
+                                res->nodes.push_back(sub);
+                            }
+                            else
+                            {
+                                parsing = false;
+                            }
+                            break;
+                        case TokenType::Comma:
+                            parser->advance();
+                            parser->skipNewlines();
+                            break;
+                        }
+                    }
+
                     return res;
                 }
                 default:

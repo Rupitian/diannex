@@ -53,6 +53,11 @@ namespace diannex
     static void patch(int ind, int targ, CompileContext* ctx)
     {
         Instruction& instr = ctx->bytecode.at(ind);
+        if (targ == ctx->bytecode.size())
+        {
+            instr.arg = ctx->offset - (instr.offset + 5 /* relative to the end of the instruction */);
+            return;
+        }
         Instruction& targInstr = ctx->bytecode.at(targ);
         instr.arg = targInstr.offset - (instr.offset + 5 /* relative to the end of the instruction */);
     }
@@ -73,9 +78,23 @@ namespace diannex
         }
     }
 
+    static void popLocalContextForLoop(CompileContext* ctx, LoopContext& loop)
+    {
+        int id = ctx->localStack.size() - 1;
+        for (int j = ctx->localCountStack.size() - 1; j >= loop.localCountStackIndex; j--)
+        {
+            int c = ctx->localCountStack.at(j);
+            for (int i = 0; i < c; i++)
+            {
+                ctx->bytecode.push_back(Instruction::make_int(&ctx->offset, Instruction::Opcode::freeloc, id));
+                id--;
+            }
+        }
+    }
+
     static void pushLoopContext(CompileContext* ctx, std::vector<Instruction::Opcode> cleanup = {})
     {
-        ctx->loopStack.push_back({ std::vector<int>(), std::vector<int>(), cleanup });
+        ctx->loopStack.push_back({ std::vector<int>(), std::vector<int>(), cleanup, (int)ctx->localCountStack.size() - 1 });
     }
 
     static void popLoopContext(int continueInd, CompileContext* ctx, BytecodeResult* res = nullptr)
@@ -83,7 +102,8 @@ namespace diannex
         {
             if (continueInd == -1 && ctx->loopStack.back().continuePatch.size() != 0)
             {
-                res->errors.push_back({ BytecodeError::ErrorType::ContinueOutsideOfLoop, 0, 0 });
+                if (res != nullptr)
+                    res->errors.push_back({ BytecodeError::ErrorType::ContinueOutsideOfLoop, 0, 0 });
             }
             else
             {
@@ -98,6 +118,21 @@ namespace diannex
                 patch(*it, ctx);
         }
         ctx->loopStack.pop_back();
+    }
+
+    static void popLoopContextContinue(int continueInd, CompileContext* ctx, BytecodeResult* res = nullptr)
+    {
+        if (continueInd == -1 && ctx->loopStack.back().continuePatch.size() != 0)
+        {
+            if (res != nullptr)
+                res->errors.push_back({ BytecodeError::ErrorType::ContinueOutsideOfLoop, 0, 0 });
+        }
+        else
+        {
+            auto& vec = ctx->loopStack.back().continuePatch;
+            for (auto it = vec.begin(); it != vec.end(); ++it)
+                patch(*it, continueInd, ctx);
+        }
     }
 
     static void patchCall(int32_t count, std::string str, CompileContext* ctx, BytecodeResult* res)
@@ -290,6 +325,49 @@ namespace diannex
         }
 
         popLocalContext(ctx);
+    }
+
+    void Bytecode::GenerateBasicAssign(NodeContent* var, CompileContext* ctx, BytecodeResult* res)
+    {
+        int localId = -1;
+        auto it = std::find(ctx->localStack.begin(), ctx->localStack.end(), var->content);
+        if (it != ctx->localStack.end())
+            localId = std::distance(ctx->localStack.begin(), it);
+
+        bool arr = var->nodes.size() != 0;
+        if (arr)
+        {
+            ctx->bytecode.emplace_back(&ctx->offset, Instruction::Opcode::save);
+            ctx->bytecode.emplace_back(&ctx->offset, Instruction::Opcode::pop);
+
+            if (localId == -1)
+                ctx->bytecode.push_back(Instruction::make_int(&ctx->offset, Instruction::Opcode::pushvarglb, ctx->string(var->content)));
+            else
+                ctx->bytecode.push_back(Instruction::make_int(&ctx->offset, Instruction::Opcode::pushvarloc, localId));
+
+            // Array accesses
+            for (int i = 0; i < var->nodes.size(); i++)
+            {
+                GenerateExpression(var->nodes.at(i), ctx, res);
+                if (i + 1 < var->nodes.size())
+                {
+                    ctx->bytecode.emplace_back(&ctx->offset, Instruction::Opcode::dup2);
+                    ctx->bytecode.emplace_back(&ctx->offset, Instruction::Opcode::pusharrind);
+                }
+            }
+
+            ctx->bytecode.emplace_back(&ctx->offset, Instruction::Opcode::load);
+
+            // Array sets
+            for (int i = 0; i < var->nodes.size(); i++)
+                ctx->bytecode.emplace_back(&ctx->offset, Instruction::Opcode::setarrind);
+        }
+
+        // Final set
+        if (localId == -1)
+            ctx->bytecode.push_back(Instruction::make_int(&ctx->offset, Instruction::Opcode::setvarglb, ctx->string(var->content)));
+        else
+            ctx->bytecode.push_back(Instruction::make_int(&ctx->offset, Instruction::Opcode::setvarloc, localId));
     }
 
     void Bytecode::GenerateSceneStatement(Node* statement, CompileContext* ctx, BytecodeResult* res)
@@ -628,16 +706,16 @@ namespace diannex
         }
         case Node::NodeType::While:
         {
+            pushLocalContext(ctx);
             int cond = ctx->offset;
             GenerateExpression(statement->nodes.at(0), ctx, res);
             int fail = patchInstruction(Instruction::Opcode::jf, ctx);
             pushLoopContext(ctx);
-            pushLocalContext(ctx);
             GenerateSceneStatement(statement->nodes.at(1), ctx, res);
-            popLocalContext(ctx);
             ctx->bytecode.push_back(Instruction::make_int(&ctx->offset, Instruction::Opcode::j, cond - (ctx->offset + 5)));
             popLoopContext(cond, ctx);
             patch(fail, ctx);
+            popLocalContext(ctx);
             break;
         }
         case Node::NodeType::For:
@@ -659,8 +737,8 @@ namespace diannex
         }
         case Node::NodeType::Do:
         {
-            int top = ctx->offset;
             pushLocalContext(ctx);
+            int top = ctx->offset;
             pushLoopContext(ctx);
             GenerateSceneStatement(statement->nodes.at(0), ctx, res);
             int cont = ctx->bytecode.size();
@@ -760,14 +838,107 @@ namespace diannex
             if (enclosing && ctx->loopStack.back().continuePatch.size() != 0)
             {
                 int end = patchInstruction(Instruction::Opcode::j, ctx);
-                popLoopContext(ctx->bytecode.size(), ctx);
+                popLoopContextContinue(ctx->bytecode.size(), ctx);
                 ctx->bytecode.emplace_back(&ctx->offset, Instruction::Opcode::pop);
-                ctx->loopStack.back().continuePatch.push_back(patchInstruction(Instruction::Opcode::j, ctx));
+                int newContinue = patchInstruction(Instruction::Opcode::j, ctx);
+                popLoopContext(-1, ctx, res);
+                popLocalContextForLoop(ctx, ctx->loopStack.back());
+                ctx->loopStack.back().continuePatch.push_back(newContinue);
                 patch(end, ctx);
             } else
                 popLoopContext(-1, ctx, res);
             if (allFail != -1)
                 patch(allFail, ctx);
+            ctx->bytecode.emplace_back(&ctx->offset, Instruction::Opcode::pop);
+            popLocalContext(ctx);
+            break;
+        }
+        case Node::NodeType::SwitchSimple:
+        {
+            LoopContext* enclosing = nullptr;
+            if (ctx->loopStack.size() != 0)
+                enclosing = &ctx->loopStack.back();
+
+            GenerateExpression(statement->nodes.at(0), ctx, res);
+            pushLocalContext(ctx);
+            pushLoopContext(ctx, { {Instruction::Opcode::pop} });
+
+            std::vector<int> jumps;
+
+            Node* defaultNode = nullptr;
+            int defaultInd = -1;
+
+            // Find indices of cases, write branches
+            for (int i = 1; i < statement->nodes.size(); i += 2)
+            {
+                Node* curr = statement->nodes.at(i);
+                if (curr->type == Node::NodeType::SwitchDefault)
+                {
+                    defaultInd = i + 1;
+                    defaultNode = statement->nodes.at(defaultInd);
+                }
+                else if (curr->type == Node::NodeType::ExprRange)
+                {
+                    ctx->bytecode.emplace_back(&ctx->offset, Instruction::Opcode::dup);
+
+                    GenerateExpression(curr->nodes.at(0), ctx, res); // lower range
+                    ctx->bytecode.emplace_back(&ctx->offset, Instruction::Opcode::cmpgte);
+                    int jumpToNext = patchInstruction(Instruction::Opcode::jf, ctx);
+                    ctx->bytecode.emplace_back(&ctx->offset, Instruction::Opcode::dup);
+
+                    GenerateExpression(curr->nodes.at(1), ctx, res); // upper range
+                    ctx->bytecode.emplace_back(&ctx->offset, Instruction::Opcode::cmplte);
+
+                    jumps.push_back(patchInstruction(Instruction::Opcode::jt, ctx));
+
+                    patch(jumpToNext, ctx);
+                }
+                else
+                {
+                    ctx->bytecode.emplace_back(&ctx->offset, Instruction::Opcode::dup);
+                    GenerateExpression(curr, ctx, res);
+                    ctx->bytecode.emplace_back(&ctx->offset, Instruction::Opcode::cmpeq);
+                    jumps.push_back(patchInstruction(Instruction::Opcode::jt, ctx));
+                }
+            }
+
+            // Default statement if all conditions fail
+            if (defaultNode != nullptr)
+                GenerateSceneStatement(defaultNode, ctx, res);
+
+            std::vector<int> toEnd{}; 
+            toEnd.push_back(patchInstruction(Instruction::Opcode::j, ctx));
+
+            // Actual statements
+            int counter = 0;
+            for (int i = 2; i < statement->nodes.size(); i += 2)
+            {
+                if (i == defaultInd)
+                    continue;
+
+                patch(jumps.at(counter), ctx);
+
+                GenerateSceneStatement(statement->nodes.at(i), ctx, res);
+                toEnd.emplace_back(patchInstruction(Instruction::Opcode::j, ctx));
+
+                counter++;
+            }
+
+            if (enclosing && ctx->loopStack.back().continuePatch.size() != 0)
+            {
+                int end = patchInstruction(Instruction::Opcode::j, ctx);
+                popLoopContextContinue(ctx->bytecode.size(), ctx);
+                ctx->bytecode.emplace_back(&ctx->offset, Instruction::Opcode::pop);
+                int newContinue = patchInstruction(Instruction::Opcode::j, ctx);
+                popLoopContext(-1, ctx, res);
+                popLocalContextForLoop(ctx, ctx->loopStack.back());
+                ctx->loopStack.back().continuePatch.push_back(newContinue);
+                patch(end, ctx);
+            }
+            else
+                popLoopContext(-1, ctx, res);
+            for (auto it = toEnd.begin(); it != toEnd.end(); ++it)
+                patch(*it, ctx);
             ctx->bytecode.emplace_back(&ctx->offset, Instruction::Opcode::pop);
             popLocalContext(ctx);
             break;
@@ -781,6 +952,7 @@ namespace diannex
                 break;
             }
 
+            popLocalContextForLoop(ctx, ctx->loopStack.back());
             ctx->loopStack.back().continuePatch.push_back(patchInstruction(Instruction::Opcode::j, ctx));
             break;
         }
@@ -793,6 +965,7 @@ namespace diannex
                 break;
             }
 
+            popLocalContextForLoop(ctx, ctx->loopStack.back());
             ctx->loopStack.back().endLoopPatch.push_back(patchInstruction(Instruction::Opcode::j, ctx));
             break;
         }
@@ -852,6 +1025,144 @@ namespace diannex
                     ctx->bytecode.emplace_back(&ctx->offset, Instruction::Opcode::load);
                 ctx->bytecode.emplace_back(&ctx->offset, Instruction::Opcode::ret);
             }
+            break;
+        }
+        case Node::NodeType::Sequence:
+        {
+            int top = ctx->offset;
+            GenerateExpression(statement->nodes.at(0), ctx, res);
+            pushLocalContext(ctx);
+            pushLoopContext(ctx, { {Instruction::Opcode::pop} });
+
+            std::vector<std::vector<int>> jumps{};
+
+            for (int j = 1; j < statement->nodes.size(); j++)
+            {
+                Node* subNode = statement->nodes.at(j);
+
+                for (int i = 0; i < subNode->nodes.size(); i += 2)
+                {
+                    Node* curr = subNode->nodes.at(i);
+
+                    ctx->bytecode.emplace_back(&ctx->offset, Instruction::Opcode::dup);
+                    if (curr->type == Node::NodeType::ExprRange)
+                    {
+                        int farther = -1;
+                        if (i + 2 >= subNode->nodes.size())
+                        {
+                            // There's nothing after this entry
+                            GenerateExpression(curr->nodes.at(1), ctx, res); // upper range
+                            ctx->bytecode.emplace_back(&ctx->offset, Instruction::Opcode::cmpeq);
+                            farther = patchInstruction(Instruction::Opcode::jt, ctx);
+                            ctx->bytecode.emplace_back(&ctx->offset, Instruction::Opcode::dup);
+                        }
+
+                        GenerateExpression(curr->nodes.at(0), ctx, res); // lower range
+                        ctx->bytecode.emplace_back(&ctx->offset, Instruction::Opcode::cmpgte);
+                        int jumpToNext = patchInstruction(Instruction::Opcode::jf, ctx);
+                        ctx->bytecode.emplace_back(&ctx->offset, Instruction::Opcode::dup);
+
+                        GenerateExpression(curr->nodes.at(1), ctx, res); // upper range
+                        ctx->bytecode.emplace_back(&ctx->offset, Instruction::Opcode::cmplte);
+
+                        jumps.push_back({ patchInstruction(Instruction::Opcode::jt, ctx), farther });
+
+                        patch(jumpToNext, ctx);
+                    }
+                    else
+                    {
+                        GenerateExpression(curr, ctx, res);
+                        ctx->bytecode.emplace_back(&ctx->offset, Instruction::Opcode::cmpeq);
+                        jumps.push_back({ patchInstruction(Instruction::Opcode::jt, ctx) });
+                    }
+                }
+            }
+
+            std::vector<int> toEnd{};
+            toEnd.emplace_back(patchInstruction(Instruction::Opcode::j, ctx));
+
+            int counter = 0;
+            for (int j = 1; j < statement->nodes.size(); j++)
+            {
+                Node* subNode = statement->nodes.at(j);
+
+                for (int i = 1; i < subNode->nodes.size(); i += 2)
+                {
+                    std::vector<int> currJumps = jumps.at(counter);
+                    patch(currJumps.at(0), ctx);
+
+                    if (i + 1 < subNode->nodes.size())
+                    {
+                        if (currJumps.size() == 2)
+                        {
+                            // farther is -1, since it's not used
+                            // if maximum value of range, jump to next, otherwise increment
+                            ctx->bytecode.emplace_back(&ctx->offset, Instruction::Opcode::dup);
+                            GenerateExpression(subNode->nodes.at(i - 1)->nodes.at(1), ctx, res);
+                            ctx->bytecode.emplace_back(&ctx->offset, Instruction::Opcode::cmpeq);
+                            int notEqual = patchInstruction(Instruction::Opcode::jf, ctx);
+
+                            // Jump to next
+                            Node* next = subNode->nodes.at(i + 1);
+                            if (next->type == Node::NodeType::ExprRange)
+                                GenerateExpression(next->nodes.at(0), ctx, res); // lower range
+                            else
+                                GenerateExpression(next, ctx, res);
+                            int equal = patchInstruction(Instruction::Opcode::j, ctx);
+
+                            patch(notEqual, ctx);
+
+                            // Otherwise, increment
+                            ctx->bytecode.emplace_back(&ctx->offset, Instruction::Opcode::dup);
+                            ctx->bytecode.push_back(Instruction::make_int(&ctx->offset, Instruction::Opcode::pushi, 1));
+                            ctx->bytecode.emplace_back(&ctx->offset, Instruction::Opcode::add);
+
+                            patch(equal, ctx);
+
+                            GenerateBasicAssign((NodeContent*)statement->nodes.at(0), ctx, res);
+                        }
+                        else
+                        {
+                            // Assign to next
+                            Node* next = subNode->nodes.at(i + 1);
+                            if (next->type == Node::NodeType::ExprRange)
+                                GenerateExpression(next->nodes.at(0), ctx, res); // lower range
+                            else
+                                GenerateExpression(next, ctx, res);
+                            GenerateBasicAssign((NodeContent*)statement->nodes.at(0), ctx, res);
+                        }
+                    }
+                    else if (currJumps.size() == 2)
+                    {
+                        // Increment
+                        ctx->bytecode.emplace_back(&ctx->offset, Instruction::Opcode::dup);
+                        ctx->bytecode.push_back(Instruction::make_int(&ctx->offset, Instruction::Opcode::pushi, 1));
+                        ctx->bytecode.emplace_back(&ctx->offset, Instruction::Opcode::add);
+                        GenerateBasicAssign((NodeContent*)statement->nodes.at(0), ctx, res);
+
+                        patch(currJumps.at(1), ctx); // Patch the farther jump here; there's nothing after this range
+                    }
+
+                    // Actual statement and branch away
+                    GenerateSceneStatement(subNode->nodes.at(i), ctx, res);
+                    toEnd.emplace_back(patchInstruction(Instruction::Opcode::j, ctx));
+
+                    counter++;
+                }
+            }
+
+            if (ctx->loopStack.back().continuePatch.size() != 0)
+            {
+                ctx->bytecode.emplace_back(&ctx->offset, Instruction::Opcode::pop);
+                ctx->bytecode.push_back(Instruction::make_int(&ctx->offset, Instruction::Opcode::j, top - (ctx->offset + 5)));
+                popLoopContext(ctx->bytecode.size() - 2, ctx, res);
+            }
+            else
+                popLoopContext(-1, ctx, res);
+            for (auto it = toEnd.begin(); it != toEnd.end(); ++it)
+                patch(*it, ctx);
+            ctx->bytecode.emplace_back(&ctx->offset, Instruction::Opcode::pop);
+            popLocalContext(ctx);
             break;
         }
         case Node::NodeType::MarkedComment:
