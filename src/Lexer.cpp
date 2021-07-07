@@ -30,6 +30,8 @@ namespace diannex
         CodeReader(const std::string& code, uint32_t line, uint16_t column)
             : code(code), position(0), length(code.length()), line(line), column(column)
         {
+            if ((uint8_t)code[0] == 0xEF && (uint8_t)code[1] == 0xBB && (uint8_t)code[2] == 0xBF)
+                position += 3;
         }
 
         uint32_t position;
@@ -271,9 +273,6 @@ namespace diannex
     void Lexer::LexString(const std::string& in, CompileContext* ctx, std::vector<Token>& out, uint32_t startLine, uint16_t startColumn)
     {
         CodeReader cr = CodeReader(in, startLine, startColumn);
-
-        if (cr.matchChars(0xEF, 0xBB, 0xBF))
-            cr.advanceChar(3); // UTF-8 BOM
 
         while (cr.position < cr.length)
         {
