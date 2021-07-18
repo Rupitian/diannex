@@ -2,7 +2,6 @@
 The diannex scripting language has a lot of features to offer, some of which might not be as obvious as other. This document will hopefully clear up any confusion regarding the syntax.
 
 ## Scenes
----
 To declare a scene, you must use the `scene` keyword followed by an identifier for your scene, you will use this identifier in an Interpreter to run the scene later. You can optionally place your scene in a namespace to help organize your script, and you can nest multiple namespaces if you so wish, just note that if you place your scene in a namespace, you must refer to it in the interpreter with `<namespace_name>.<scene_name>`.
 
 You can also optionally add flags to your scene, flags act as persistant variables that are set the first time you run your scene, and they keep their value so you can do something else the next time you run the scene.
@@ -49,7 +48,6 @@ scene flag_test :
 ```
 
 ## Definitions
----
 Definitions act similarly to a dictionary/map in another language. Their main purpose is for holding strings for elements not necessarily useful for dialogue, for example, translatable text for UI elements.
 
 Defining a definition is simple, all you need to do is use the `def` keyword followed by an identifier. Definitions follow all the same rules regarding namespaces as scenes do. However, to be clear, definitions can only store *strings* and nothing else. If you wish to store numbers or other data in a definition, you'll need to put it in a string and convert it to the type you want in your engine.
@@ -67,7 +65,6 @@ def menu
 ```
 
 ## Functions
----
 You can define functions in your diannex script so that you can reuse pieces of code in your scenes without interoperating with your engine code. Functions can be declared just by using the `func` keyword followed by an identifier. Functions can also take in arguments and return a value. Functions, like scenes, can also take flags, they are defined the same way and used the same way as well. One thing to note about functions however is that when you're calling them in your scenes, you must make note of the namespace the function is in, if it's in the same namespace as your scene, you can just use the function name, but if it's in another namespace, you must fully qualify the name using `<namespace>.<function>`.
 
 Here's some examples on defining a function:
@@ -90,11 +87,9 @@ namespace test
 ```
 
 ## Control Statements
----
 The diannex scripting language has various control statements that you may not see in other programming languages. These are `choose`, `choice`, `repeat`, and `sequence`. We also of course have the trademark control statements of `if`, `else`, `for`, `while`, and `switch`. I'll refrain from going over the trademark statements and instead focus a little more on each of our unique statements.
 
 ### Choose
----
 The `choose` statement allows a user to randomly pick between multiple options. You can optionally specify a weight for options in a percentage. By default each option has an equal chance of being choosen.
 
 Here's an example of using `choose` taken from our example script in the [README](./README.md#basic-language-sample):
@@ -112,7 +107,6 @@ func example(a)
 ```
 
 ### Choice
----
 While the `choice` statement might sound similar to the `choose` statement, there are huge differences between them! The `choice` statement is used to allow the user to select an option, which then allows you to run different parts of your script based on their choice. However, much like the `choose` statement, you can specify a chance for either option as a percentage. However, unlike `choose`, this value is the chance of the option appearing. So having an option have a 50% chance would mean the option has a 50% chance of appearing to the user to be selected.
 
 Here's an example of using `choice`, once again taken from our example script in the [README](./README.md#basic-language-sample):
@@ -145,7 +139,6 @@ scene intro
 ```
 
 ### Repeat
----
 The `repeat` statement is much like a condensed `for` loop. Much like what the name implies, the `repeat` statement will run the code under it as many times as specified. This is mainly useful for when you wish to have a loop but don't care for the specific iteration of the loop.
 
 Here's another example pulled from our [README](./README.md#basic-language-sample) showcasing the `repeat` statement:
@@ -159,7 +152,6 @@ scene intro
 ```
 
 ### Sequence
----
 And finally, we have the `sequence` statement. The `sequence` statement works similarly to a `switch` statement. hHe main caveat however, is the expression passed gets incremented after every run. The expression must be a variable or an index into an array for it to work however. Additionally, you can use `continue` and `break` to use the `sequence` more like a loop, where `continue` will move ahead to the next iteration, and `break` will leave the sequence altogether.
 
 Here's an example on using the `sequence` statement:
@@ -177,7 +169,6 @@ sequence $var // optional parentheses
 ```
 
 ## Diannex Gotchas
----
 There are also a few things they may catch you by surprise if you're not aware of them. Mainly the `char` method, optional parenthesis/braces, and `interpolation`.
 
 ## Char
