@@ -270,7 +270,41 @@ namespace diannex
         }
     };
 
-    void Lexer::LexString(const std::string& in, CompileContext* ctx, std::vector<Token>& out, uint32_t startLine, uint16_t startColumn)
+    static const std::unordered_map<std::string, Token> keywords =
+    {
+        { "namespace", Token(TokenType::GroupKeyword, 0, 0, KeywordType::Namespace) },
+        { "scene", Token(TokenType::GroupKeyword, 0, 0, KeywordType::Scene) },
+        { "def", Token(TokenType::GroupKeyword, 0, 0, KeywordType::Def) },
+        { "func", Token(TokenType::GroupKeyword, 0, 0, KeywordType::Func) },
+
+        { "choice", Token(TokenType::MainKeyword, 0, 0, KeywordType::Choice) },
+        { "choose", Token(TokenType::MainKeyword, 0, 0, KeywordType::Choose) },
+        { "if", Token(TokenType::MainKeyword, 0, 0, KeywordType::If) },
+        { "else", Token(TokenType::MainKeyword, 0, 0, KeywordType::Else) },
+        { "while", Token(TokenType::MainKeyword, 0, 0, KeywordType::While) },
+        { "for", Token(TokenType::MainKeyword, 0, 0, KeywordType::For) },
+        { "do", Token(TokenType::MainKeyword, 0, 0, KeywordType::Do) },
+        { "repeat", Token(TokenType::MainKeyword, 0, 0, KeywordType::Repeat) },
+        { "switch", Token(TokenType::MainKeyword, 0, 0, KeywordType::Switch) },
+        { "continue", Token(TokenType::MainKeyword, 0, 0, KeywordType::Continue) },
+        { "break", Token(TokenType::MainKeyword, 0, 0, KeywordType::Break) },
+        { "return", Token(TokenType::MainKeyword, 0, 0, KeywordType::Return) },
+        { "case", Token(TokenType::MainKeyword, 0, 0, KeywordType::Case) },
+        { "default", Token(TokenType::MainKeyword, 0, 0, KeywordType::Default) },
+        { "sequence", Token(TokenType::MainKeyword, 0, 0, KeywordType::Sequence) },
+
+        { "require", Token(TokenType::MainSubKeyword, 0, 0, KeywordType::Require) },
+
+        { "local", Token(TokenType::ModifierKeyword, 0, 0, KeywordType::Local) },
+        { "global", Token(TokenType::ModifierKeyword, 0, 0, KeywordType::Global) },
+
+        { "false", Token(TokenType::Number, 0, 0, "0") },
+        { "true", Token(TokenType::Number, 0, 0, "1") },
+
+        { "undefined", Token(TokenType::Undefined, 0, 0, "undefined") },
+    };
+
+    void Lexer::LexString(const std::string& in, CompileContext* ctx, std::vector<Token>& out, uint32_t startLine, uint16_t startColumn, std::unordered_set<std::string>* macros)
     {
         CodeReader cr = CodeReader(in, startLine, startColumn);
 
@@ -755,62 +789,54 @@ namespace diannex
                     case '~':
                         out.emplace_back(TokenType::BitwiseNegate, line, col);
                         break;
-                    default: // Must be an identifier, or it's invalid
+                    default: 
+                        // Must be an identifier of some type, or it's invalid
                         std::unique_ptr<std::string> identifier = cr.readIdentifier();
                         if (identifier)
                         {
-                            if (identifier->compare("namespace") == 0)
-                                out.emplace_back(TokenType::GroupKeyword, line, col, KeywordType::Namespace);
-                            else if (identifier->compare("scene") == 0)
-                                out.emplace_back(TokenType::GroupKeyword, line, col, KeywordType::Scene);
-                            else if (identifier->compare("def") == 0)
-                                out.emplace_back(TokenType::GroupKeyword, line, col, KeywordType::Def);
-                            else if (identifier->compare("func") == 0)
-                                out.emplace_back(TokenType::GroupKeyword, line, col, KeywordType::Func);
-                            else if (identifier->compare("choice") == 0)
-                                out.emplace_back(TokenType::MainKeyword, line, col, KeywordType::Choice);
-                            else if (identifier->compare("choose") == 0)
-                                out.emplace_back(TokenType::MainKeyword, line, col, KeywordType::Choose);
-                            else if (identifier->compare("if") == 0)
-                                out.emplace_back(TokenType::MainKeyword, line, col, KeywordType::If);
-                            else if (identifier->compare("else") == 0)
-                                out.emplace_back(TokenType::MainKeyword, line, col, KeywordType::Else);
-                            else if (identifier->compare("while") == 0)
-                                out.emplace_back(TokenType::MainKeyword, line, col, KeywordType::While);
-                            else if (identifier->compare("for") == 0)
-                                out.emplace_back(TokenType::MainKeyword, line, col, KeywordType::For);
-                            else if (identifier->compare("do") == 0)
-                                out.emplace_back(TokenType::MainKeyword, line, col, KeywordType::Do);
-                            else if (identifier->compare("repeat") == 0)
-                                out.emplace_back(TokenType::MainKeyword, line, col, KeywordType::Repeat);
-                            else if (identifier->compare("switch") == 0)
-                                out.emplace_back(TokenType::MainKeyword, line, col, KeywordType::Switch);
-                            else if (identifier->compare("continue") == 0)
-                                out.emplace_back(TokenType::MainKeyword, line, col, KeywordType::Continue);
-                            else if (identifier->compare("break") == 0)
-                                out.emplace_back(TokenType::MainKeyword, line, col, KeywordType::Break);
-                            else if (identifier->compare("return") == 0)
-                                out.emplace_back(TokenType::MainKeyword, line, col, KeywordType::Return);
-                            else if (identifier->compare("case") == 0)
-                                out.emplace_back(TokenType::MainKeyword, line, col, KeywordType::Case);
-                            else if (identifier->compare("default") == 0)
-                                out.emplace_back(TokenType::MainKeyword, line, col, KeywordType::Default);
-                            else if (identifier->compare("sequence") == 0)
-                                out.emplace_back(TokenType::MainKeyword, line, col, KeywordType::Sequence);
-                            else if (identifier->compare("require") == 0)
-                                out.emplace_back(TokenType::MainSubKeyword, line, col, KeywordType::Require);
-                            else if (identifier->compare("local") == 0)
-                                out.emplace_back(TokenType::ModifierKeyword, line, col, KeywordType::Local);
-                            else if (identifier->compare("global") == 0)
-                                out.emplace_back(TokenType::ModifierKeyword, line, col, KeywordType::Global);
-                            else if (identifier->compare("false") == 0)
-                                out.emplace_back(TokenType::Number, line, col, "0");
-                            else if (identifier->compare("true") == 0)
-                                out.emplace_back(TokenType::Number, line, col, "1");
-                            else if (identifier->compare("undefined") == 0)
-                                out.emplace_back(TokenType::Undefined, line, col, "undefined");
+                            auto keyword = keywords.find(*identifier);
+                            if (keyword != keywords.end())
+                            {
+                                // This is a built-in keyword; copy the token and assign line/column
+                                Token token = keyword->second;
+                                token.line = line;
+                                token.column = col;
+                                out.push_back(token);
+                            }
                             else
-                                out.emplace_back(TokenType::Identifier, line, col, *identifier.get());
+                            {
+                                auto macro = ctx->project->options.macros.find(*identifier);
+                                if (macro != ctx->project->options.macros.end())
+                                {
+                                    // This is one of the project-defined macros; lex the macro in this context
+                                    bool createSet = (macros == nullptr);
+                                    if (createSet)
+                                        macros = new std::unordered_set<std::string>();
+
+                                    auto status = macros->insert(*identifier);
+                                    if (status.second)
+                                    {
+                                        // This isn't present in the macro chain yet, so we're safe to parse
+                                        LexString(macro->second, ctx, out, line, col, macros); // todo? maybe have a way to tell that line/col are inside a macro
+                                    }
+                                    else
+                                    {
+                                        // This is already present, signifying illegal recursive macro definitions
+                                        out.emplace_back(TokenType::Error, line, col, "recursive_macro");
+                                    }
+
+                                    if (createSet)
+                                    {
+                                        delete macros;
+                                        macros = nullptr;
+                                    }
+                                }
+                                else
+                                {
+                                    // This is a regular identifier
+                                    out.emplace_back(TokenType::Identifier, line, col, *identifier.get());
+                                }
+                            }
                         }
                         else
                         {
@@ -840,7 +866,7 @@ namespace diannex
                 {
                     if (cr.skipWhitespace(out))
                     {
-                        out.emplace_back(TokenType::Error, cr.line, cr.column, "Unexpected EOF");
+                        out.emplace_back(TokenType::Error, cr.line, cr.column, "unexpected_eof");
                         break;
                     }
 
@@ -884,7 +910,7 @@ namespace diannex
                 {
                     if (cr.skipWhitespace(out))
                     {
-                        out.emplace_back(TokenType::Error, cr.line, cr.column, "Unexpected EOF");
+                        out.emplace_back(TokenType::Error, cr.line, cr.column, "unexpected_eof");
                         break;
                     }
 
@@ -910,7 +936,7 @@ namespace diannex
                     if (cr.stack > 0)
                         cr.stack--;
                     else
-                        out.emplace_back(TokenType::Error, t.line, t.column, "Trailing #endif");
+                        out.emplace_back(TokenType::Error, t.line, t.column, "trailing_endif");
                 }
             }
         }
@@ -920,163 +946,167 @@ namespace diannex
     {
         switch (t.type)
         {
-        case Identifier:
+        case TokenType::Identifier:
             return "Identifier";
-        case Number:
+        case TokenType::Number:
             return "Number";
-        case Percentage:
+        case TokenType::Percentage:
             return "Percentage";
-        case String:
-        case MarkedString:
-        case ExcludeString:
+        case TokenType::String:
+        case TokenType::MarkedString:
+        case TokenType::ExcludeString:
             return "String";
-        case OpenParen:
+        case TokenType::OpenParen:
             return "'('";
-        case CloseParen:
+        case TokenType::CloseParen:
             return "')'";
-        case OpenCurly:
+        case TokenType::OpenCurly:
             return "'{'";
-        case CloseCurly:
+        case TokenType::CloseCurly:
             return "'}'";
-        case OpenBrack:
+        case TokenType::OpenBrack:
             return "'['";
-        case CloseBrack:
+        case TokenType::CloseBrack:
             return "']'";
-        case Semicolon:
+        case TokenType::Semicolon:
             return "';'";
-        case Colon:
+        case TokenType::Colon:
             return "':'";
-        case Comma:
+        case TokenType::Comma:
             return "','";
-        case Ternary:
+        case TokenType::Ternary:
             return "'?'";
-        case VariableStart:
+        case TokenType::VariableStart:
             return "'$'";
-        case Equals:
+        case TokenType::Equals:
             return "'='";
-        case Plus:
+        case TokenType::Plus:
             return "'+'";
-        case Increment:
+        case TokenType::Increment:
             return "'++'";
-        case PlusEquals:
+        case TokenType::PlusEquals:
             return "'+='";
-        case Minus:
+        case TokenType::Minus:
             return "'-'";
-        case Decrement:
+        case TokenType::Decrement:
             return "'--'";
-        case MinusEquals:
+        case TokenType::MinusEquals:
             return "'-='";
-        case Multiply:
+        case TokenType::Multiply:
             return "'*'";
-        case Power:
+        case TokenType::Power:
             return "'**'";
-        case MultiplyEquals:
+        case TokenType::MultiplyEquals:
             return "'*='";
-        case Divide:
+        case TokenType::Divide:
             return "'/'";
-        case DivideEquals:
+        case TokenType::DivideEquals:
             return "'/='";
-        case Mod:
+        case TokenType::Mod:
             return "'%'";
-        case ModEquals:
+        case TokenType::ModEquals:
             return "'%='";
-        case Not:
+        case TokenType::Not:
             return "'!'";
-        case CompareEQ:
+        case TokenType::CompareEQ:
             return "'=='";
-        case CompareGT:
+        case TokenType::CompareGT:
             return "'>'";
-        case CompareLT:
+        case TokenType::CompareLT:
             return "'<'";
-        case CompareGTE:
+        case TokenType::CompareGTE:
             return "'>='";
-        case CompareLTE:
+        case TokenType::CompareLTE:
             return "'<='";
-        case CompareNEQ:
+        case TokenType::CompareNEQ:
             return "'!='";
-        case LogicalAnd:
+        case TokenType::LogicalAnd:
             return "'&&'";
-        case LogicalOr:
+        case TokenType::LogicalOr:
             return "'||'";
-        case BitwiseLShift:
+        case TokenType::BitwiseLShift:
             return "'<<'";
-        case BitwiseRShift:
+        case TokenType::BitwiseRShift:
             return "'>>'";
-        case BitwiseAnd:
+        case TokenType::BitwiseAnd:
             return "'&'";
-        case BitwiseAndEquals:
+        case TokenType::BitwiseAndEquals:
             return "'&='";
-        case BitwiseOr:
+        case TokenType::BitwiseOr:
             return "'|'";
-        case BitwiseOrEquals:
+        case TokenType::BitwiseOrEquals:
             return "'|='";
-        case BitwiseXor:
+        case TokenType::BitwiseXor:
             return "'^'";
-        case BitwiseXorEquals:
+        case TokenType::BitwiseXorEquals:
             return "'^='";
-        case BitwiseNegate:
+        case TokenType::BitwiseNegate:
             return "'~'";
-        case MarkedComment:
+        case TokenType::MarkedComment:
             return "MarkedComment";
-        case GroupKeyword:
+        case TokenType::Range:
+            return "Range";
+        case TokenType::GroupKeyword:
             switch (t.keywordType)
             {
-            case Namespace:
+            case KeywordType::Namespace:
                 return "'namespace'";
-            case Scene:
+            case KeywordType::Scene:
                 return "'scene'";
-            case Def:
+            case KeywordType::Def:
                 return "'def'";
-            case Func:
+            case KeywordType::Func:
                 return "'func'";
             }
             break;
-        case MainKeyword:
+        case TokenType::MainKeyword:
             switch (t.keywordType)
             {
-            case Choice:
+            case KeywordType::Choice:
                 return "'choice'";
-            case Choose:
+            case KeywordType::Choose:
                 return "'choose'";
-            case If:
+            case KeywordType::If:
                 return "'if'";
-            case Else:
+            case KeywordType::Else:
                 return "'else'";
-            case While:
+            case KeywordType::While:
                 return "'while'";
-            case For:
+            case KeywordType::For:
                 return "'for'";
-            case Do:
+            case KeywordType::Do:
                 return "'do'";
-            case Repeat:
+            case KeywordType::Repeat:
                 return "'repeat'";
-            case Switch:
+            case KeywordType::Switch:
                 return "'switch'";
-            case Continue:
+            case KeywordType::Continue:
                 return "'continue'";
-            case Break:
+            case KeywordType::Break:
                 return "'break'";
-            case Return:
+            case KeywordType::Return:
                 return "'return'";
-            case Case:
+            case KeywordType::Case:
                 return "'case'";
-            case Default:
+            case KeywordType::Default:
                 return "'default'";
+            case KeywordType::Sequence:
+                return "'sequence'";
             }
             break;
-        case MainSubKeyword:
+        case TokenType::MainSubKeyword:
             switch (t.keywordType)
             {
-            case Require:
+            case KeywordType::Require:
                 return "'require'";
             }
             break;
-        case ModifierKeyword:
+        case TokenType::ModifierKeyword:
             switch (t.keywordType)
             {
-            case Local:
+            case KeywordType::Local:
                 return "'local'";
-            case Global:
+            case KeywordType::Global:
                 return "'global'";
             }
             break;

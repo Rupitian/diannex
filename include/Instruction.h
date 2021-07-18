@@ -11,7 +11,7 @@ namespace diannex
 {
     struct Instruction
     {
-        enum Opcode
+        enum class Opcode
         {
             nop = 0x00, // No-op
 
@@ -111,7 +111,7 @@ namespace diannex
             double_t argDouble;
         };
 
-        int32_t offset;
+        int32_t offset = -1;
 
         inline Instruction(Opcode opcode)
         {
@@ -168,7 +168,7 @@ namespace diannex
 
         void Serialize(BinaryWriter* bw) const
         {
-            bw->WriteUInt8(opcode);
+            bw->WriteUInt8((uint8_t)opcode);
             switch (opcode)
             {
             case Opcode::freeloc:

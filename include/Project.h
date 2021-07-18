@@ -7,12 +7,6 @@
 
 namespace diannex
 {
-    struct ProjectInterpolationFlags
-    {
-        // Symbol used for interpolation. default: $
-        std::string symbol = "$"; // Limited to a single character
-    };
-
     struct ProjectOptions
     {
         // Message to print when compilation finishes. default: None
@@ -21,8 +15,8 @@ namespace diannex
         // Source files to compile. default: None
         std::vector<std::string> files;
 
-        // Flags to set for interpolation. default: <see ProjectInterpolationFlags>
-        ProjectInterpolationFlags interpolationFlags;
+        // Whether string interpolation in the language is enabled. default: true
+        bool interpolationEnabled;
 
         // Directory to output the binary. default: './out/'
         // If using public translation files, they'll be output

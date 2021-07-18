@@ -342,6 +342,9 @@ int main(int argc, char** argv)
                 case ParseError::ErrorType::DuplicateFlagName:
                     std::cout << "Duplicate flag names." << std::endl;
                     break;
+                case ParseError::ErrorType::ErrorToken:
+                    std::cout << e.info1 << std::endl;
+                    break;
                 }
             }
 

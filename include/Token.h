@@ -5,7 +5,7 @@
 
 namespace diannex
 {
-    enum TokenType
+    enum class TokenType
     {
         Identifier, // a-z, A-Z, other language chars, _ (and 0-9 or . after first char)
         Number, // 0-9 first chars, optional . followed by more 0-9
@@ -82,7 +82,7 @@ namespace diannex
         ErrorUnenclosedString, // If there's a string with no end
     };
 
-    enum KeywordType
+    enum class KeywordType
     {
         None,
 
@@ -125,10 +125,10 @@ namespace diannex
 
     struct Token
     {
-        TokenType type;
-        uint32_t line;
-        uint16_t column;
-        KeywordType keywordType;
+        TokenType type = TokenType::Error;
+        uint32_t line = 0;
+        uint16_t column = 0;
+        KeywordType keywordType = KeywordType::None;
         std::string content; // unused if KeywordType is known
 
         Token(TokenType type, uint32_t line, uint16_t column);

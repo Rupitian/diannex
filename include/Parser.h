@@ -11,7 +11,7 @@ namespace diannex
 {
     struct ParseError
     {
-        enum ErrorType
+        enum class ErrorType
         {
             ExpectedTokenButGot,
             ExpectedTokenButEOF,
@@ -23,7 +23,8 @@ namespace diannex
             UnexpectedSwitchDefault,
             ChooseWithoutStatement,
             ChoiceWithoutStatement,
-            DuplicateFlagName
+            DuplicateFlagName,
+            ErrorToken
         };
 
         ErrorType type;
@@ -58,6 +59,8 @@ namespace diannex
         Token ensureToken(TokenType type, TokenType type2);
         Token ensureToken(TokenType type, KeywordType keywordType);
 
+        bool checkErrorToken(Token& t);
+
         std::vector<ParseError> errors;
         CompileContext* context;
         uint32_t defaultLine = 0;
@@ -78,7 +81,7 @@ namespace diannex
     class Node
     {
     public:
-        enum NodeType
+        enum class NodeType
         {
             // File-scope
             Block,

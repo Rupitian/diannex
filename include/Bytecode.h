@@ -9,7 +9,7 @@ namespace diannex
 {
     struct BytecodeError
     {
-        enum ErrorType
+        enum class ErrorType
         {
             SceneAlreadyExists,
             FunctionAlreadyExists,

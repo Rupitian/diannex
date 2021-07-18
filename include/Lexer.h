@@ -14,12 +14,13 @@
 
 namespace diannex
 {
+    // Stringifies a token. Can return nullptr if it is a certain Error-type token.
     const char* tokenToString(Token t);
 
     class Lexer
     {
     public:
-        static void LexString(const std::string& in, CompileContext* ctx, std::vector<Token>& out, uint32_t startLine = 1, uint16_t startColumn = 1);
+        static void LexString(const std::string& in, CompileContext* ctx, std::vector<Token>& out, uint32_t startLine = 1, uint16_t startColumn = 1, std::unordered_set<std::string>* macros = nullptr);
     private:
         Lexer();
     };

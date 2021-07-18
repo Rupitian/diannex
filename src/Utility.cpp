@@ -20,9 +20,7 @@ namespace diannex
                 {"options", {
                                  {"compile_finish_message", ""},
                                  {"files", {"main.dx"}},
-                                 {"interpolation_flags", {
-                                                                 {"symbol", "$"}
-                                                         }},
+                                 {"interpolation_enabled", true},
                                  {"binary_outdir", "./out/"},
                                  {"binary_name", ""},
                                  {"translation_private", false},
@@ -85,7 +83,7 @@ namespace diannex
         if (!project.contains("options"))
         {
             proj.options.files.emplace_back("main.dx");
-            proj.options.interpolationFlags.symbol = "$";
+            proj.options.interpolationEnabled = true;
             proj.options.binaryOutputDir = "./out/";
             proj.options.binaryName = "out";
             proj.options.translationPrivate = false;
@@ -111,9 +109,9 @@ namespace diannex
             proj.options.files.emplace_back("main.dx");
         }
 
-        proj.options.interpolationFlags.symbol = project["options"].contains("interpolation_flags") && project["options"]["interpolation_flags"].contains("symbol") ?
-                                                 project["options"]["interpolation_flags"]["symbol"].get<std::string>() :
-                                                 "$";
+        proj.options.interpolationEnabled = project["options"].contains("interpolation_enabled") ?
+                                            project["options"]["interpolation_enabled"].get<bool>() :
+                                            true;
 
         proj.options.binaryOutputDir = project["options"].contains("binary_outdir") ?
                                        project["options"]["binary_outdir"].get<std::string>() :

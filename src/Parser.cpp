@@ -33,10 +33,8 @@ namespace diannex
 
     std::string Parser::ProcessStringInterpolation(Parser* parser, Token& token, const std::string& input, std::vector<class Node*>* nodeList)
     {
-        std::string interpStr = parser->context->project->options.interpolationFlags.symbol;
-        if (interpStr.empty())
+        if (!parser->context->project->options.interpolationEnabled)
             return input;
-        char interpChar = interpStr.at(0);
 
         // Build the new string result as well as parse expressions
         std::stringstream ss(std::ios_base::app | std::ios_base::out);
@@ -46,7 +44,7 @@ namespace diannex
         while (pos < len)
         {
             char curr = input.at(pos);
-            if (curr == interpChar && pos + 1 < len && input.at(pos + 1) == '{')
+            if (curr == '$' && pos + 1 < len && input.at(pos + 1) == '{')
             {
                 bool parse = false;
                 if (pos != 0)
@@ -92,7 +90,7 @@ namespace diannex
                     }
 
                     // Also add the proper string representation
-                    ss << interpChar << "{" << interpCount++ << "}";
+                    ss << "${" << interpCount++ << "}";
                     line = tempLine;
                     col = tempCol + 1;
                 }
@@ -199,7 +197,7 @@ namespace diannex
         if (position == tokenCount)
         {
             errors.push_back({ ParseError::ErrorType::ExpectedTokenButEOF, defaultLine, defaultColumn, tokenToString(Token(type, 0, 0)) });
-            return Token(TokenType::Error, 0, 0);
+            return Token(TokenType::Error, 0, 0, "unexpected_eof");
         }
 
         Token t = tokens->at(position);
@@ -218,7 +216,7 @@ namespace diannex
         if (position == tokenCount)
         {
             errors.push_back({ ParseError::ErrorType::ExpectedTokenButEOF, defaultLine, defaultColumn, tokenToString(Token(type, 0, 0)) });
-            return Token(TokenType::Error, 0, 0);
+            return Token(TokenType::Error, 0, 0, "unexpected_eof");
         }
 
         Token t = tokens->at(position);
@@ -237,7 +235,7 @@ namespace diannex
         if (position == tokenCount)
         {
             errors.push_back({ ParseError::ErrorType::ExpectedTokenButEOF, defaultLine, defaultColumn, tokenToString(Token(type, 0, 0, keywordType)) });
-            return Token(TokenType::Error, 0, 0);
+            return Token(TokenType::Error, 0, 0, "unexpected_eof");
         }
 
         Token t = tokens->at(position);
@@ -250,6 +248,26 @@ namespace diannex
                                 tokenToString(Token(type, 0, 0, keywordType)), tokenToString(t) });
             return Token(TokenType::Error, 0, 0);
         }
+    }
+
+    bool Parser::checkErrorToken(Token& t)
+    {
+        if (t.type == TokenType::Error)
+        {
+            char* info = nullptr;
+            if (t.content.compare("recursive_macro") == 0)
+                info = "Recursive macro definition.";
+            else if (t.content.compare("unexpected_eof") == 0)
+                info = "Unexpected EOF.";
+            else if (t.content.compare("trailing_endif") == 0)
+                info = "Trailing #endif.";
+            if (info != nullptr)
+            {
+                errors.push_back({ ParseError::ErrorType::ErrorToken, t.line, t.column, info });
+                return true;
+            }
+        }
+        return false;
     }
 
     /*
@@ -383,6 +401,7 @@ namespace diannex
                 }
                 else
                 {
+                    parser->checkErrorToken(name);
                     parser->errors.push_back({ ParseError::ErrorType::ExpectedTokenButGot, t.line, t.column,
                                                 tokenToString(Token(TokenType::Identifier, 0, 0)), tokenToString(name) });
                     parser->synchronize();
@@ -397,12 +416,16 @@ namespace diannex
 
         case TokenType::MarkedComment:
             if (modifier != KeywordType::None)
+            {
+                parser->checkErrorToken(t);
                 parser->errors.push_back({ ParseError::ErrorType::UnexpectedModifierFor, t.line, t.column, tokenToString(t) });
+            }
             parser->advance();
             return new NodeContent(t, NodeType::MarkedComment);
 
         default:
-            parser->errors.push_back({ ParseError::ErrorType::UnexpectedToken, t.line, t.column, tokenToString(t) });
+            if (!parser->checkErrorToken(t))
+                parser->errors.push_back({ ParseError::ErrorType::UnexpectedToken, t.line, t.column, tokenToString(t) });
             parser->synchronize();
             break;
         }
@@ -585,6 +608,7 @@ namespace diannex
             case TokenType::BitwiseXorEquals:
                 if (modifier != KeywordType::None)
                     parser->errors.push_back({ ParseError::ErrorType::UnexpectedModifierFor, t.line, t.column, tokenToString(t) });
+                [[fallthrough]];
             case TokenType::Semicolon:
             case TokenType::Equals:
             {
@@ -598,7 +622,8 @@ namespace diannex
                 return res;
             }
             default:
-                parser->errors.push_back({ ParseError::ErrorType::UnexpectedToken, t.line, t.column, tokenToString(t) });
+                if (!parser->checkErrorToken(t))
+                    parser->errors.push_back({ ParseError::ErrorType::UnexpectedToken, t.line, t.column, tokenToString(t) });
                 parser->synchronize();
                 break;
             }
@@ -667,6 +692,7 @@ namespace diannex
                     {
                     case TokenType::MarkedString:
                         parser->errors.push_back({ ParseError::ErrorType::UnexpectedMarkedString, next.line, next.column });
+                        [[fallthrough]];
                     case TokenType::String:
                     case TokenType::ExcludeString:
                     {
@@ -905,6 +931,8 @@ namespace diannex
                     if (keyword.type != TokenType::Error && keyword.keywordType != KeywordType::While)
                         parser->errors.push_back({ ParseError::ErrorType::ExpectedTokenButGot, t.line, t.column,
                                                     tokenToString(Token(TokenType::MainKeyword, 0, 0, KeywordType::While)), tokenToString(keyword) });
+                    else
+                        parser->checkErrorToken(keyword);
 
                     parser->skipNewlines();
                     Node* condition = Node::ParseExpression(parser);
@@ -1204,7 +1232,8 @@ namespace diannex
                     return res;
                 }
                 default:
-                    parser->errors.push_back({ ParseError::ErrorType::UnexpectedToken, t.line, t.column, tokenToString(t) });
+                    if (!parser->checkErrorToken(t))
+                        parser->errors.push_back({ ParseError::ErrorType::UnexpectedToken, t.line, t.column, tokenToString(t) });
                     parser->synchronize();
                     break;
                 }
@@ -1240,7 +1269,8 @@ namespace diannex
                 parser->advance();
                 return new Node(NodeType::None);
             default:
-                parser->errors.push_back({ ParseError::ErrorType::UnexpectedToken, t.line, t.column, tokenToString(t) });
+                if (!parser->checkErrorToken(t))
+                    parser->errors.push_back({ ParseError::ErrorType::UnexpectedToken, t.line, t.column, tokenToString(t) });
                 parser->synchronize();
                 break;
             }
@@ -1336,6 +1366,7 @@ namespace diannex
                             parser->skipNewlines();
                             if (t.type != TokenType::Comma)
                             {
+                                parser->checkErrorToken(t);
                                 parser->errors.push_back({ ParseError::ErrorType::ExpectedTokenButGot, t.line, t.column, tokenToString(Token(TokenType::Comma, 0, 0)), tokenToString(t) });
                                 break;
                             }
@@ -1360,6 +1391,7 @@ namespace diannex
                             parser->advance();
                             if (t.type != TokenType::Comma)
                             {
+                                parser->checkErrorToken(t);
                                 parser->errors.push_back({ ParseError::ErrorType::ExpectedTokenButGot, t.line, t.column, tokenToString(Token(TokenType::Comma, 0, 0)), tokenToString(t) });
                                 break;
                             }
@@ -1799,6 +1831,7 @@ namespace diannex
                             parser->skipNewlines();
                             if (t.type != TokenType::Comma)
                             {
+                                parser->checkErrorToken(t);
                                 parser->errors.push_back({ ParseError::ErrorType::ExpectedTokenButGot, t.line, t.column, tokenToString(Token(TokenType::Comma, 0, 0)), tokenToString(t) });
                                 break;
                             }
@@ -1832,7 +1865,8 @@ namespace diannex
             }
             }
 
-            parser->errors.push_back({ ParseError::ErrorType::UnexpectedToken, t.line, t.column, tokenToString(t) });
+            if (!parser->checkErrorToken(t))
+                parser->errors.push_back({ ParseError::ErrorType::UnexpectedToken, t.line, t.column, tokenToString(t) });
             return nullptr;
         }
 
@@ -1887,7 +1921,8 @@ namespace diannex
             parser->advance();
             return new NodeContent(t.content, NodeType::MarkedComment);
         default:
-            parser->errors.push_back({ ParseError::ErrorType::UnexpectedToken, t.line, t.column, tokenToString(t) });
+            if (!parser->checkErrorToken(t))
+                parser->errors.push_back({ ParseError::ErrorType::UnexpectedToken, t.line, t.column, tokenToString(t) });
             parser->synchronize();
             break;
         }
