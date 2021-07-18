@@ -84,6 +84,16 @@ namespace test
         // Your function code, however you can refer to your argument with `$a`
     }
 }
+
+// Here's an example on actually calling your function
+scene test
+{
+    // Call the example function that's not in a namespace
+    example // Parenthesis are optional
+
+    // Call the example function that's in a namespace, and pass in 20 as an argument
+    test.example(20)
+}
 ```
 
 ## Control Statements
@@ -152,7 +162,7 @@ scene intro
 ```
 
 ### Sequence
-And finally, we have the `sequence` statement. The `sequence` statement works similarly to a `switch` statement. hHe main caveat however, is the expression passed gets incremented after every run. The expression must be a variable or an index into an array for it to work however. Additionally, you can use `continue` and `break` to use the `sequence` more like a loop, where `continue` will move ahead to the next iteration, and `break` will leave the sequence altogether.
+And finally, we have the `sequence` statement. The `sequence` statement works similarly to a `switch` statement. The main caveat however, is the expression passed gets incremented after every run. The expression must be a variable or an index into an array for it to work. Additionally, you can use `continue` and `break` to use the `sequence` more like a loop, where `continue` will move ahead to the next iteration, and `break` will leave the sequence altogether.
 
 Here's an example on using the `sequence` statement:
 ```cs
@@ -165,6 +175,19 @@ sequence $var // optional parentheses
     }, // optional comma
     2..3: "This runs the third and fourth times the code is executed"
     100: "This runs the fifth time, and every time after"
+}
+
+/**
+ * Here's a sequence that's using an index into an array.
+ *
+ * In this specific example, the value in the array `$arr`
+ * at index `0` will be increment after every run.
+ */
+sequence $arr[0]
+{
+    0: "This runs the first time"
+    1: "This runs the second time"
+    2: "This runs the third time, and every time after"
 }
 ```
 
