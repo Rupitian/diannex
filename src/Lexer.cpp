@@ -830,6 +830,8 @@ namespace diannex
                                         delete macros;
                                         macros = nullptr;
                                     }
+                                    else
+                                        macros->erase(*identifier);
                                 }
                                 else
                                 {
