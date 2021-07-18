@@ -638,8 +638,8 @@ namespace diannex
             }
 
             // End location of the choice
-            for (int i = 0; i < jumps.size(); i++)
-                patch(jumps.at(i), ctx);
+            for (auto it = jumps.begin(); it != jumps.end(); ++it)
+                patch(*it, ctx);
             break;
         }
         case Node::NodeType::Choose:
@@ -679,9 +679,9 @@ namespace diannex
                     jumps.push_back(patchInstruction(Instruction::Opcode::j, ctx));
             }
 
-            // End location of the choice
-            for (int i = 0; i < jumps.size(); i++)
-                patch(jumps.at(i), ctx);
+            // End location of the choose
+            for (auto it = jumps.begin(); it != jumps.end(); ++it)
+                patch(*it, ctx);
             break;
         }
         case Node::NodeType::If:
