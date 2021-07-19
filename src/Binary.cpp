@@ -93,39 +93,38 @@ namespace diannex
             {
                 std::string funcName = it->vec->at(0);
 
-                // Check top-level context first
-                if (auto func = ctx->functionBytecode.find(funcName); func != ctx->functionBytecode.end())
+                // Start with local levels, go to higher levels
+                for (int i = it->vec->size() - 1; i >= 1; --i)
                 {
-                    delete it->vec;
-
-                    it->opcode = Instruction::Opcode::call;
-                    int32_t temp = it->count;
-                    it->arg = std::distance(ctx->functionBytecode.begin(), func);
-                    it->arg2 = temp;
-                }
-                else
-                {
-                    // Check all other levels
-                    for (int i = 1; i < it->vec->size(); i++)
-                    {
-                        auto func = ctx->functionBytecode.find(it->vec->at(i) + "." + funcName);
-                        if (func != ctx->functionBytecode.end())
-                        {
-                            delete it->vec;
-
-                            it->opcode = Instruction::Opcode::call;
-                            int32_t temp = it->count;
-                            it->arg = std::distance(ctx->functionBytecode.begin(), func);
-                            it->arg2 = temp;
-                            break;
-                        }
-                    }
-
-                    if (it->opcode != Instruction::Opcode::call)
+                    auto func = ctx->functionBytecode.find(it->vec->at(i) + "." + funcName);
+                    if (func != ctx->functionBytecode.end())
                     {
                         delete it->vec;
 
-                        // Unable to find, so must be external
+                        it->opcode = Instruction::Opcode::call;
+                        int32_t temp = it->count;
+                        it->arg = std::distance(ctx->functionBytecode.begin(), func);
+                        it->arg2 = temp;
+                        break;
+                    }
+                }
+
+                // Check top-level context last
+                if (it->opcode != Instruction::Opcode::call)
+                {
+                    delete it->vec;
+
+                    if (auto func = ctx->functionBytecode.find(funcName); func != ctx->functionBytecode.end())
+                    {
+                        // This is in the top level
+                        it->opcode = Instruction::Opcode::call;
+                        int32_t temp = it->count;
+                        it->arg = std::distance(ctx->functionBytecode.begin(), func);
+                        it->arg2 = temp;
+                    }
+                    else
+                    {
+                        // Unable to find at any level, so must be externally-defined
                         it->opcode = Instruction::Opcode::callext;
                         int32_t temp = it->count;
                         int str = ctx->string(funcName);
