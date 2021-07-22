@@ -47,8 +47,19 @@ scene flag_test :
 }
 ```
 
+## Variables
+Diannex supports two types of variables. Local variables, which are scoped to the function, scene or namespace, and global variables, which can be accessed everywhere.
+
+Here's an example of how to define a variable:
+```cs
+scene intro
+{
+  local $username = "My User" // Local variable
+}
+```
+
 ## Definitions
-Definitions act similarly to a dictionary/map in another language. Their main purpose is for holding strings for elements not necessarily useful for dialogue, for example, translatable text for UI elements.
+Definitions act similarly to a dictionary/map in another language. Their main purpose is for holding strings for elements not necessarily useful for dialogue, for example, translatable text for UI elements. Definitions are NOT used inside of the Diannex files, but in the application itself.
 
 Defining a definition is simple, all you need to do is use the `def` keyword followed by an identifier. Definitions follow all the same rules regarding namespaces as scenes do. However, to be clear, definitions can only store *strings* and nothing else. If you wish to store numbers or other data in a definition, you'll need to put it in a string and convert it to the type you want in your engine.
 
