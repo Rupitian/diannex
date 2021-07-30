@@ -39,7 +39,7 @@ namespace diannex
     public:
         static ParseResult* ParseTokens(CompileContext* ctx, std::vector<Token>* tokens);
         static ParseResult ParseTokensExpression(CompileContext* ctx, std::vector<Token>* tokens, uint32_t defaultLine, uint16_t defaultColumn);
-        static std::string ProcessStringInterpolation(Parser* parser, Token& token, const std::string& input, std::vector<class Node*>* nodeList);
+        static const std::string& ProcessStringInterpolation(Parser* parser, Token& token, const std::string& input, std::vector<class Node*>* nodeList);
 
         Parser(CompileContext* ctx, std::vector<Token>* tokens);
 

@@ -392,8 +392,8 @@ int main(int argc, char** argv)
                 case BytecodeError::ErrorType::FunctionAlreadyExists:
                     std::cout << "Duplicate function name '" << e.info1 << "'." << std::endl;
                     break;
-                case BytecodeError::ErrorType::DefinitionBlockAlreadyExists:
-                    std::cout << "Duplicate definition block name '" << e.info1 << "'." << std::endl;
+                case BytecodeError::ErrorType::DefinitionAlreadyExists:
+                    std::cout << "Duplicate definition name '" << e.info1 << "'." << std::endl;
                     break;
                 case BytecodeError::ErrorType::LocalVariableAlreadyExists:
                     std::cout << "Local variable '" << e.info1 << "' already defined." << std::endl;

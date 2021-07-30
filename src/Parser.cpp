@@ -31,7 +31,7 @@ namespace diannex
         return { Node::ParseExpression(&parser), parser.errors };
     }
 
-    std::string Parser::ProcessStringInterpolation(Parser* parser, Token& token, const std::string& input, std::vector<class Node*>* nodeList)
+    const std::string& Parser::ProcessStringInterpolation(Parser* parser, Token& token, const std::string& input, std::vector<class Node*>* nodeList)
     {
         if (!parser->context->project->options.interpolationEnabled)
             return input;

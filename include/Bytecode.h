@@ -13,7 +13,7 @@ namespace diannex
         {
             SceneAlreadyExists,
             FunctionAlreadyExists,
-            DefinitionBlockAlreadyExists,
+            DefinitionAlreadyExists,
             LocalVariableAlreadyExists,
             ContinueOutsideOfLoop,
             BreakOutsideOfLoop,

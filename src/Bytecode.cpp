@@ -273,8 +273,6 @@ namespace diannex
                 NodeContent* nc = ((NodeContent*)n);
                 ctx->symbolStack.push_back(nc->content);
                 const std::string& symbol = expandSymbol(ctx);
-                if (!ctx->definitions.insert(symbol).second)
-                    res->errors.push_back({ BytecodeError::ErrorType::DefinitionBlockAlreadyExists, nc->token.line, nc->token.column, std::string(symbol) });
 
                 // Iterate over all of the definitions, and generate proper info
                 for (Node* subNode : n->nodes)
@@ -297,13 +295,16 @@ namespace diannex
                         }
                         else
                             hasExpr = false;
+                        const std::string& name = symbol + '.' + def->key;
                         if (def->excludeValueTranslation)
                         {
-                            ctx->definitionBytecode.insert(std::make_pair(symbol + '.' + def->key, std::make_pair(def->value, hasExpr ? pos : -1)));
+                            if (!ctx->definitionBytecode.insert(std::make_pair(name, std::make_pair(def->value, hasExpr ? pos : -1))).second)
+                                res->errors.push_back({ BytecodeError::ErrorType::DefinitionAlreadyExists, nc->token.line, nc->token.column, name });
                         }
                         else
                         {
-                            ctx->definitionBytecode.insert(std::make_pair(symbol + '.' + def->key, std::make_pair(translationInfo(ctx, def->value), hasExpr ? pos : -1)));
+                            if (!ctx->definitionBytecode.insert(std::make_pair(name, std::make_pair(translationInfo(ctx, def->value), hasExpr ? pos : -1))).second)
+                                res->errors.push_back({ BytecodeError::ErrorType::DefinitionAlreadyExists, nc->token.line, nc->token.column, name });
                         }
                     }
                 }
