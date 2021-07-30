@@ -158,32 +158,26 @@ The tool is a command-line application, with these options which can be seen sim
 ```
   diannex [OPTION...] <files>
 
-  -p, --project <path>          Load project file
-  -g, --generate [=path(=DiannexTesting)]
-                                Generate new project file
-      --convert                 Convert a private file to the public format
-  -c, --cli                     Don't use a project file and read commands
-                                from cli
-  -h, --help                    Shows this message
+  -p, --project <path>                         Load project file
+  -g, --generate[=path(=DiannexTesting)]       Generate new project file
+      --convert                                Convert a private file to the public format
+  -c, --cli                                    Don't use a project file and read commands from cli
+  -h, --help                                   Shows this message
 
  Conversion options:
-      --in <path>               Path to private input file
-      --out <path>              Path to public output file
+      --in <path>                              Path to private input file
+      --out <path>                             Path to public output file
 
  Project options:
-  -b, --binary (default: "./out")
-                                Directory to output binary
-  -n, --name (default: "out")   Name of output binary file
-  -t, --public                  Whether to output public translation file
-  -N, --pubname (default: "out")
-                                Name of output public translation file
-  -T, --private                 Whether to output private translation files
-  -D, --privname (default: "out")
-                                Name of output private translation file
-  -d, --privdir (default: "./translations")
-                                Directory to output private translation files
-  -C, --compress                Whether or not to use compression
-  --files                       File(s) to compile
+  -b, --binary (default: "./out")              Directory to output binary
+  -n, --name (default: "out")                  Name of output binary file
+  -t, --public                                 Whether to output public translation file
+  -N, --pubname (default: "out")               Name of output public translation file
+  -T, --private                                Whether to output private translation files
+  -D, --privname (default: "out")              Name of output private translation file
+  -d, --privdir (default: "./translations")    Directory to output private translation files
+  -C, --compress                               Whether or not to use compression
+  --files[=path,path...]                       File(s) to compile
   ```
   
 ## Building
