@@ -68,6 +68,7 @@ namespace diannex
 
         uint32_t GetSize();
         const char* GetBuffer();
+        void SizePatch(uint32_t position);
     private:
         uint32_t size;
         uint32_t realBufferSize;

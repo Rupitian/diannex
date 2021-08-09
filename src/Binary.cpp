@@ -26,7 +26,7 @@ namespace diannex
     bool Binary::Write(BinaryWriter* bw, CompileContext* ctx)
     {
         bw->WriteBytes("DNX", 3);
-        bw->WriteUInt8(3); // Version
+        bw->WriteUInt8(4); // Version
 
         // Flags
         bool compressed = ctx->project->options.compression,
@@ -36,6 +36,8 @@ namespace diannex
         BinaryMemoryWriter bmw;
 
         // Scene metadata
+        uint32_t begin = bmw.GetSize();
+        bmw.WriteUInt32(0);
         bmw.WriteUInt32(ctx->sceneBytecode.size());
         for (auto it = ctx->sceneBytecode.begin(); it != ctx->sceneBytecode.end(); ++it)
         {
@@ -48,8 +50,11 @@ namespace diannex
             for (int i = 0; i < size; i++)
                 bmw.WriteInt32(instructionOffset(it->second.at(i), ctx));
         }
+        bmw.SizePatch(begin);
 
         // Function metadata
+        begin = bmw.GetSize();
+        bmw.WriteUInt32(0);
         bmw.WriteUInt32(ctx->functionBytecode.size());
         for (auto it = ctx->functionBytecode.begin(); it != ctx->functionBytecode.end(); ++it)
         {
@@ -62,8 +67,11 @@ namespace diannex
             for (int i = 0; i < size; i++)
                 bmw.WriteInt32(instructionOffset(it->second.at(i), ctx));
         }
+        bmw.SizePatch(begin);
 
         // Definition metadata
+        begin = bmw.GetSize();
+        bmw.WriteUInt32(0);
         bmw.WriteUInt32(ctx->definitionBytecode.size());
         for (auto it = ctx->definitionBytecode.begin(); it != ctx->definitionBytecode.end(); ++it)
         {
@@ -81,6 +89,7 @@ namespace diannex
             // Bytecode index
             bmw.WriteInt32(instructionOffset(p.second, ctx));
         }
+        bmw.SizePatch(begin);
 
         std::set<int> externalFunctions{};
         int externalFunctionIndex = 0;
@@ -138,9 +147,12 @@ namespace diannex
         }
 
         // Internal string table
+        begin = bmw.GetSize();
+        bmw.WriteUInt32(0);
         bmw.WriteUInt32(ctx->internalStrings.size());
         for (auto it = ctx->internalStrings.begin(); it != ctx->internalStrings.end(); ++it)
             bmw.WriteString(*it);
+        bmw.SizePatch(begin);
 
         // Internal translation file (if applicable)
         if (internalTranslationFile)
@@ -150,16 +162,22 @@ namespace diannex
                 if (!it->isComment)
                     count++;
 
+            begin = bmw.GetSize();
+            bmw.WriteUInt32(0);
             bmw.WriteUInt32(count);
             for (auto it = ctx->translationInfo.begin(); it != ctx->translationInfo.end(); ++it)
                 if (!it->isComment)
                     bmw.WriteString(it->text);
+            bmw.SizePatch(begin);
         }
 
         // External function list
+        begin = bmw.GetSize();
+        bmw.WriteUInt32(0);
         bmw.WriteUInt32(externalFunctions.size());
         for (auto it = externalFunctions.begin(); it != externalFunctions.end(); ++it)
             bmw.WriteUInt32(*it);
+        bmw.SizePatch(begin);
 
         uint32_t size = bmw.GetSize();
         if (compressed)

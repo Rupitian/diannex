@@ -50,7 +50,7 @@ namespace diannex
     {
         Write(&value, 2);
     }
-    
+
     void BinaryWriter::WriteInt32(int32_t value)
     {
         Write(&value, 4);
@@ -200,10 +200,23 @@ namespace diannex
                 memcpy(&buf[this->size], ptr, size);
                 break;
             }
-        } else
+        } 
+        else
             memcpy(&buf[this->size], ptr, size);
         this->size += size;
         return size;
+    }
+
+    void BinaryMemoryWriter::SizePatch(uint32_t position)
+    {
+        uint32_t sizeDifference = this->size - (position + 4);
+        if (this->endian == BIG_ENDIAN)
+        {
+            sizeDifference = swapbits(sizeDifference);
+            memcpy(&buf[position], &sizeDifference, 4);
+        }
+        else
+            memcpy(&buf[position], &sizeDifference, 4);
     }
 }
 
