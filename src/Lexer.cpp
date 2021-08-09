@@ -308,6 +308,8 @@ namespace diannex
     {
         CodeReader cr = CodeReader(in, startLine, startColumn);
 
+        std::vector<std::string> includes;
+
         while (cr.position < cr.length)
         {
             if (cr.skipWhitespace(out))
@@ -906,7 +908,7 @@ namespace diannex
 
                     fs::path p = fs::absolute(ctx->currentFile).parent_path();
                     p /= ss.str();
-                    ctx->queue.push(p.string());
+                    includes.push_back(p.string());
                 }
                 else if (t.keywordType == KeywordType::IfDef || t.keywordType == KeywordType::IfNDef)
                 {
@@ -942,6 +944,10 @@ namespace diannex
                 }
             }
         }
+
+        // Add includes to beginning of list, in reverse order
+        for (auto it = includes.rbegin(); it != includes.rend(); ++it)
+            ctx->queue.push_front(*it);
     }
 
     const char* tokenToString(Token t)

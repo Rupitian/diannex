@@ -34,7 +34,7 @@ namespace diannex
     struct CompileContext
     {
         ProjectFormat* project;
-        std::queue<std::string> queue;
+        std::deque<std::string> queue;
         std::string currentFile;
         std::unordered_set<std::string> files;
         std::vector<std::pair<std::string, std::vector<Token>>> tokenList;

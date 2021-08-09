@@ -243,14 +243,14 @@ int main(int argc, char** argv)
     CompileContext context;
     context.project = &project;
     for (auto& file : project.options.files)
-        context.queue.push(file);
+        context.queue.push_back(file);
 
     // Load all of the files in the queue and lex them into tokens
     std::cout << "Lexing..." << std::endl;
     while (!context.queue.empty())
     {
         std::string file = (baseDirectory / context.queue.front()).string();
-        context.queue.pop();
+        context.queue.pop_front();
         std::string buf;
         try
         {
