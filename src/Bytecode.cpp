@@ -27,7 +27,8 @@ namespace diannex
             {
                 ctx->translationInfo.push_back({ expandSymbol(ctx), false, text });
                 ctx->translationStringIndex++;
-            } else
+            } 
+            else
                 ctx->translationInfo.push_back({ expandSymbol(ctx), true, text });
         }
         else if (!isComment)
@@ -823,7 +824,8 @@ namespace diannex
             {
                 allFail = -1;
                 cases.insert(cases.begin() + defaultInsertLoc, std::make_pair(patchInstruction(Instruction::Opcode::j, ctx), defaultInd));
-            } else
+            } 
+            else
                 allFail = patchInstruction(Instruction::Opcode::j, ctx);
 
             // Write statements
@@ -846,7 +848,8 @@ namespace diannex
                 popLocalContextForLoop(ctx, ctx->loopStack.back());
                 ctx->loopStack.back().continuePatch.push_back(newContinue);
                 patch(end, ctx);
-            } else
+            } 
+            else
                 popLoopContext(-1, ctx, res);
             if (allFail != -1)
                 patch(allFail, ctx);

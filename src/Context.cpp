@@ -10,11 +10,18 @@ namespace diannex
         }
     }
 
-    int CompileContext::string(std::string str)
+    int CompileContext::string(const std::string& str)
     {
-        int res = std::find(internalStrings.begin(), internalStrings.end(), str) - internalStrings.begin();
-        if (res == internalStrings.size())
+        int index = internalStrings.size();
+        auto p = internalStringsMap.insert({ str, index });
+        if (p.second)
+        {
+            // This is a new string; add to list as well
             internalStrings.push_back(str);
-        return res;
+            return index;
+        }
+
+        // Return index of previously-stored string
+        return p.first->second;
     }
 }

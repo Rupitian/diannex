@@ -39,22 +39,22 @@ namespace diannex
     public:
         static ParseResult* ParseTokens(CompileContext* ctx, std::vector<Token>* tokens);
         static ParseResult ParseTokensExpression(CompileContext* ctx, std::vector<Token>* tokens, uint32_t defaultLine, uint16_t defaultColumn);
-        static const std::string& ProcessStringInterpolation(Parser* parser, Token& token, const std::string& input, std::vector<class Node*>* nodeList);
+        static const std::string ProcessStringInterpolation(Parser* parser, Token& token, const std::string& input, std::vector<class Node*>* nodeList);
 
         Parser(CompileContext* ctx, std::vector<Token>* tokens);
 
-        void advance();
-        void synchronize();
-        void storePosition();
-        void restorePosition();
+        inline void advance();
+        inline void synchronize();
+        inline void storePosition();
+        inline void restorePosition();
 
-        bool isMore();
+        inline bool isMore();
         void skipNewlines();
         void skipSemicolons();
-        bool isNextToken(TokenType type);
+        inline bool isNextToken(TokenType type);
 
-        Token peekToken();
-        Token previousToken();
+        inline Token peekToken();
+        inline Token previousToken();
         Token ensureToken(TokenType type);
         Token ensureToken(TokenType type, TokenType type2);
         Token ensureToken(TokenType type, KeywordType keywordType);

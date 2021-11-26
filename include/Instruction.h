@@ -115,11 +115,17 @@ namespace diannex
 
         inline Instruction(Opcode opcode)
         {
+            arg = arg2 = 0;
+            vec = nullptr;
+            argDouble = 0;
             this->opcode = opcode;
         }
 
         inline Instruction(int32_t* offset, Opcode opcode)
         {
+            arg = arg2 = 0;
+            vec = nullptr;
+            argDouble = 0;
             this->opcode = opcode;
             if (offset != nullptr)
             {

@@ -31,7 +31,7 @@ namespace diannex
         return { Node::ParseExpression(&parser), parser.errors };
     }
 
-    const std::string& Parser::ProcessStringInterpolation(Parser* parser, Token& token, const std::string& input, std::vector<class Node*>* nodeList)
+    const std::string Parser::ProcessStringInterpolation(Parser* parser, Token& token, const std::string& input, std::vector<class Node*>* nodeList)
     {
         if (!parser->context->project->options.interpolationEnabled)
             return input;
@@ -121,7 +121,7 @@ namespace diannex
         errors = std::vector<ParseError>();
     }
 
-    void Parser::advance()
+    inline void Parser::advance()
     {
         position++;
     }
@@ -140,28 +140,28 @@ namespace diannex
         }
     }
 
-    void Parser::storePosition()
+    inline void Parser::storePosition()
     {
         storedPosition = position;
     }
 
-    void Parser::restorePosition()
+    inline void Parser::restorePosition()
     {
         position = storedPosition;
     }
 
-    bool Parser::isMore()
+    inline bool Parser::isMore()
     {
         return position < tokenCount;
     }
 
-    void Parser::skipNewlines()
+    inline void Parser::skipNewlines()
     {
         while (isMore() && peekToken().type == TokenType::Newline)
             advance();
     }
 
-    void Parser::skipSemicolons()
+    inline void Parser::skipSemicolons()
     {
         if (isMore())
         {
@@ -171,23 +171,24 @@ namespace diannex
                 {
                     advance();
                     skipNewlines();
-                } while (isMore() && (t = peekToken()).type == TokenType::Semicolon);
+                } 
+                while (isMore() && (t = peekToken()).type == TokenType::Semicolon);
                 skipNewlines();
             }
         }
     }
 
-    bool Parser::isNextToken(TokenType type)
+    inline bool Parser::isNextToken(TokenType type)
     {
         return tokens->at(position).type == type;
     }
 
-    Token Parser::previousToken()
+    inline Token Parser::previousToken()
     {
         return tokens->at(position - 1);
     }
 
-    Token Parser::peekToken()
+    inline Token Parser::peekToken()
     {
         return tokens->at(position);
     }
@@ -340,7 +341,8 @@ namespace diannex
         {
             parser->ensureToken(TokenType::OpenCurly);
             res = new NodeContent("", NodeType::Block);
-        } else
+        } 
+        else
             res = new Node(NodeType::Block);
 
         parser->skipNewlines();

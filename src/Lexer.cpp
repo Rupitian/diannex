@@ -42,46 +42,46 @@ namespace diannex
         int16_t stack = 0;
         bool directiveFollowup = false;
 
-        char peekChar()
+        inline char peekChar()
         {
             return code[position];
         }
 
-        char peekCharNext()
+        inline char peekCharNext()
         {
             return code[position + 1];
         }
 
-        char peekCharNext2()
+        inline char peekCharNext2()
         {
             return code[position + 2];
         }
 
-        void advanceChar()
+        inline void advanceChar()
         {
             column++;
             position++;
         }
 
-        void advanceChar(int count)
+        inline void advanceChar(int count)
         {
             for (int i = 0; i < count; i++)
                 advanceChar();
         }
 
-        void backUpChar()
+        inline void backUpChar()
         {
             column--;
             position--;
         }
 
-        char readChar()
+        inline char readChar()
         {
             column++;
             return code[position++];
         }
 
-        bool matchChars(char c, char c2)
+        inline bool matchChars(char c, char c2)
         {
             if (position + 1 >= length)
                 return false;
@@ -90,7 +90,7 @@ namespace diannex
             return (peekCharNext() == c2);
         }
 
-        bool matchChars(char c, char c2, char c3)
+        inline bool matchChars(char c, char c2, char c3)
         {
             if (position + 2 >= length)
                 return false;
@@ -181,12 +181,12 @@ namespace diannex
 
         // Reads an identifier
         // Returns null if not valid
-        std::unique_ptr<std::string> readIdentifier()
+        std::optional<std::string> readIdentifier()
         {
             uint32_t base = position;
 
             if (position == length || !isValidIdentifierStart(readChar()))
-                return std::unique_ptr<std::string>(nullptr); // invalid
+                return {}; // invalid
 
             while (position < length)
             {
@@ -197,7 +197,7 @@ namespace diannex
                     break;
             }
 
-            return std::make_unique<std::string>(code.substr(base, position - base));
+            return code.substr(base, position - base);
         }
 
         void readNumber(char curr, const std::string& in, std::vector<Token>& out)
@@ -259,12 +259,12 @@ namespace diannex
     private:
         std::string code;
 
-        static bool isValidIdentifierStart(char c)
+        static inline bool isValidIdentifierStart(char c)
         {
             return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || (unsigned char)c >= 0xC0;
         }
 
-        static bool isValidIdentifierMid(char c)
+        static inline bool isValidIdentifierMid(char c)
         {
             return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || c == '.' || (c >= '0' && c <= '9') || (unsigned char)c >= 0x80;
         }
@@ -435,8 +435,7 @@ namespace diannex
 
                     // Read the directive type
                     cr.skipWhitespace(out);
-                    std::unique_ptr<std::string> identifier = cr.readIdentifier();
-                    if (identifier)
+                    if (auto identifier = cr.readIdentifier())
                     {
                         cr.directiveFollowup = true;
                         if (identifier->compare("include") == 0)
@@ -458,7 +457,7 @@ namespace diannex
                         else 
                         {
                             cr.directiveFollowup = false;
-                            out.emplace_back(TokenType::ErrorString, line, col, *identifier.get());
+                            out.emplace_back(TokenType::ErrorString, line, col, *identifier);
                         }
                     }
                     else
@@ -793,8 +792,7 @@ namespace diannex
                         break;
                     default: 
                         // Must be an identifier of some type, or it's invalid
-                        std::unique_ptr<std::string> identifier = cr.readIdentifier();
-                        if (identifier)
+                        if (auto identifier = cr.readIdentifier())
                         {
                             auto keyword = keywords.find(*identifier);
                             if (keyword != keywords.end())
@@ -838,7 +836,7 @@ namespace diannex
                                 else
                                 {
                                     // This is a regular identifier
-                                    out.emplace_back(TokenType::Identifier, line, col, *identifier.get());
+                                    out.emplace_back(TokenType::Identifier, line, col, *identifier);
                                 }
                             }
                         }
@@ -920,20 +918,21 @@ namespace diannex
 
                     bool invert = t.keywordType == KeywordType::IfNDef;
                     int line = cr.line, column = cr.column;
-                    std::unique_ptr<std::string> identifier = cr.readIdentifier();
-                    if (!identifier)
+                    if (auto identifier = cr.readIdentifier())
+                    {
+                        bool skip = ctx->project->options.macros.find(*identifier) == ctx->project->options.macros.end();
+                        if (invert) 
+                            skip = !skip;
+
+                        if (skip)
+                            cr.skip = cr.stack;
+
+                        cr.stack++;
+                    }
+                    else
                     {
                         out.emplace_back(TokenType::Error, line, column);
-                        continue;
                     }
-
-                    bool skip = ctx->project->options.macros.find(*identifier) == ctx->project->options.macros.end();
-                    if (invert) skip = !skip;
-
-                    if (skip)
-                        cr.skip = cr.stack;
-
-                    cr.stack++;
                 }
                 else if (t.keywordType == KeywordType::EndIf)
                 {
