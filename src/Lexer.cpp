@@ -143,6 +143,7 @@ namespace diannex
 
                         // Ignore all further text on this line
                         uint32_t thisLine = line;
+                        skipWhitespace(out);
                         while (position < length && thisLine == line)
                         {
                             advanceChar();
@@ -162,13 +163,19 @@ namespace diannex
                         // Ignore text until EOF or "*/"
                         while (position < length)
                         {
-                            if (readChar() == '*')
+                            char c = readChar();
+                            if (c == '*')
                             {
                                 if (position + 1 < length && peekChar() == '/')
                                 {
                                     advanceChar();
                                     return true;
                                 }
+                            }
+                            else if (c == '\n')
+                            {
+                                line++;
+                                column = 0;
                             }
                         }
 
