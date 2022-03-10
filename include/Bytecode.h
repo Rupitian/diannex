@@ -24,7 +24,7 @@ namespace diannex
 
         ErrorType type;
         uint32_t line;
-        uint16_t column;
+        uint32_t column;
         std::string info1;
     };
 

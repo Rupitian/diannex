@@ -17,7 +17,7 @@ namespace diannex
         return ss.str();
     }
 
-    static int translationInfo(CompileContext* ctx, std::string text, bool isComment = false)
+    static int translationInfo(CompileContext* ctx, std::string text, StringData* stringData, bool isComment = false)
     {
         int res = ctx->translationStringIndex;
         if (ctx->project->options.translationPrivate &&
@@ -25,17 +25,29 @@ namespace diannex
         {
             if (!isComment)
             {
-                ctx->translationInfo.push_back({ expandSymbol(ctx), false, text });
+                ctx->translationInfo.push_back({ expandSymbol(ctx), false, text, stringData ? stringData->localizedStringId : -1});
                 ctx->translationStringIndex++;
             } 
             else
-                ctx->translationInfo.push_back({ expandSymbol(ctx), true, text });
+                ctx->translationInfo.push_back({ expandSymbol(ctx), true, text, -1 });
         }
         else if (!isComment)
         {
-            ctx->translationInfo.push_back({ "", false, text });
+            ctx->translationInfo.push_back({ "", false, text, stringData ? stringData->localizedStringId : -1 });
             ctx->translationStringIndex++;
         }
+
+        if (!isComment && ctx->project->options.addStringIds && stringData)
+        {
+            // Add string info when necessary
+            if (stringData->localizedStringId == -1)
+            {
+                auto& vec = ctx->stringIdPositions[ctx->currentFile];
+                auto& pair = std::make_pair(stringData->endOfStringPos, ++ctx->maxStringId);
+                vec.insert(std::upper_bound(vec.begin(), vec.end(), pair), pair);
+            }
+        }
+
         return res;
     }
 
@@ -185,7 +197,7 @@ namespace diannex
             switch (n->type)
             {
             case Node::NodeType::MarkedComment:
-                translationInfo(ctx, ((NodeContent*)n)->content, true);
+                translationInfo(ctx, ((NodeContent*)n)->content, nullptr, true);
                 break;
             case Node::NodeType::Namespace:
                 ctx->symbolStack.push_back(((NodeContent*)n)->content);
@@ -280,7 +292,7 @@ namespace diannex
                 {
                     if (subNode->type == Node::NodeType::MarkedComment)
                     {
-                        translationInfo(ctx, ((NodeContent*)subNode)->content, true);
+                        translationInfo(ctx, ((NodeContent*)subNode)->content, nullptr, true);
                     }
                     else
                     {
@@ -304,7 +316,7 @@ namespace diannex
                         }
                         else
                         {
-                            if (!ctx->definitionBytecode.insert(std::make_pair(name, std::make_pair(translationInfo(ctx, def->value), hasExpr ? pos : -1))).second)
+                            if (!ctx->definitionBytecode.insert(std::make_pair(name, std::make_pair(translationInfo(ctx, def->value, def->stringData.get()), hasExpr ? pos : -1))).second)
                                 res->errors.push_back({ BytecodeError::ErrorType::DefinitionAlreadyExists, nc->token.line, nc->token.column, name });
                         }
                     }
@@ -531,13 +543,13 @@ namespace diannex
             case TokenType::MarkedString:
                 if (sc->nodes.size() == 1)
                 {
-                    ctx->bytecode.push_back(Instruction::make_int(&ctx->offset, Instruction::Opcode::pushs, translationInfo(ctx, sc->token.content)));
+                    ctx->bytecode.push_back(Instruction::make_int(&ctx->offset, Instruction::Opcode::pushs, translationInfo(ctx, sc->token.content, sc->token.stringData.get())));
                 }
                 else
                 {
                     for (int i = sc->nodes.size() - 1; i > 0; i--)
                         GenerateExpression(sc->nodes.at(i), ctx, res);
-                    ctx->bytecode.push_back(Instruction::make_int2(&ctx->offset, Instruction::Opcode::pushints, translationInfo(ctx, sc->token.content), sc->nodes.size()));
+                    ctx->bytecode.push_back(Instruction::make_int2(&ctx->offset, Instruction::Opcode::pushints, translationInfo(ctx, sc->token.content, sc->token.stringData.get()), sc->nodes.size()));
                 }
                 break;
             }
@@ -575,13 +587,13 @@ namespace diannex
             {
                 if (tr->nodes.size() == 0)
                 {
-                    ctx->bytecode.push_back(Instruction::make_int(&ctx->offset, Instruction::Opcode::pushs, translationInfo(ctx, tr->content)));
+                    ctx->bytecode.push_back(Instruction::make_int(&ctx->offset, Instruction::Opcode::pushs, translationInfo(ctx, tr->content, tr->stringData.get())));
                 }
                 else
                 {
                     for (auto it = tr->nodes.rbegin(); it != tr->nodes.rend(); ++it)
                         GenerateExpression(*it, ctx, res);
-                    ctx->bytecode.push_back(Instruction::make_int2(&ctx->offset, Instruction::Opcode::pushints, translationInfo(ctx, tr->content), tr->nodes.size()));
+                    ctx->bytecode.push_back(Instruction::make_int2(&ctx->offset, Instruction::Opcode::pushints, translationInfo(ctx, tr->content, tr->stringData.get()), tr->nodes.size()));
                 }
             }
             if (statement->type == Node::NodeType::TextRun)
@@ -1170,7 +1182,7 @@ namespace diannex
             break;
         }
         case Node::NodeType::MarkedComment:
-            translationInfo(ctx, ((NodeContent*)statement)->content, true);
+            translationInfo(ctx, ((NodeContent*)statement)->content, nullptr, true);
             break;
         }
     }
@@ -1329,13 +1341,13 @@ namespace diannex
             case TokenType::MarkedString:
                 if (constant->nodes.size() == 0)
                 {
-                    ctx->bytecode.push_back(Instruction::make_int(&ctx->offset, Instruction::Opcode::pushs, translationInfo(ctx, constant->token.content)));
+                    ctx->bytecode.push_back(Instruction::make_int(&ctx->offset, Instruction::Opcode::pushs, translationInfo(ctx, constant->token.content, constant->token.stringData.get())));
                 }
                 else
                 {
                     for (auto it = constant->nodes.rbegin(); it != constant->nodes.rend(); ++it)
                         GenerateExpression(*it, ctx, res);
-                    ctx->bytecode.push_back(Instruction::make_int2(&ctx->offset, Instruction::Opcode::pushints, translationInfo(ctx, constant->token.content), constant->nodes.size()));
+                    ctx->bytecode.push_back(Instruction::make_int2(&ctx->offset, Instruction::Opcode::pushints, translationInfo(ctx, constant->token.content, constant->token.stringData.get()), constant->nodes.size()));
                 }
                 break;
             case TokenType::Undefined:

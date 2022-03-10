@@ -10,16 +10,26 @@ namespace fs = std::filesystem;
 namespace diannex
 {
     // Token constructors
-    Token::Token(TokenType type, uint32_t line, uint16_t column)
+    Token::Token(TokenType type, uint32_t line, uint32_t column)
         : type(type), line(line), column(column)
     {
     }
-    Token::Token(TokenType type, uint32_t line, uint16_t column, KeywordType keywordType)
+    Token::Token(TokenType type, uint32_t line, uint32_t column, KeywordType keywordType)
         : type(type), line(line), column(column), keywordType(keywordType)
     {
     }
-    Token::Token(TokenType type, uint32_t line, uint16_t column, std::string content)
+    Token::Token(TokenType type, uint32_t line, uint32_t column, std::string content)
         : type(type), line(line), column(column), content(content)
+    {
+    }
+    Token::Token(TokenType type, uint32_t line, uint32_t column, std::string content, std::shared_ptr<StringData> stringData)
+        : type(type), line(line), column(column), content(content), stringData(stringData)
+    {
+    }
+
+    // StringData constructors
+    StringData::StringData(int32_t localizedStringId, uint32_t endOfStringPos)
+        : localizedStringId(localizedStringId), endOfStringPos(endOfStringPos)
     {
     }
 
@@ -27,7 +37,7 @@ namespace diannex
     class CodeReader
     {
     public:
-        CodeReader(const std::string& code, uint32_t line, uint16_t column)
+        CodeReader(const std::string& code, uint32_t line, uint32_t column)
             : code(code), position(0), length(code.length()), line(line), column(column)
         {
             if ((uint8_t)code[0] == 0xEF && (uint8_t)code[1] == 0xBB && (uint8_t)code[2] == 0xBF)
@@ -37,7 +47,7 @@ namespace diannex
         uint32_t position;
         uint32_t length;
         uint32_t line;
-        uint16_t column;
+        uint32_t column;
         int16_t skip = -1;
         int16_t stack = 0;
         bool directiveFollowup = false;
@@ -315,7 +325,11 @@ namespace diannex
     {
         CodeReader cr = CodeReader(in, startLine, startColumn);
 
+#if !DIANNEX_OLD_INCLUDE_ORDER
         std::vector<std::string> includes;
+#endif
+
+        out.reserve(1024);
 
         while (cr.position < cr.length)
         {
@@ -555,12 +569,50 @@ namespace diannex
 
                     if (foundEnd)
                     {
+                        std::shared_ptr<StringData> data;
+                        if (cr.position + 2 < cr.length && cr.peekChar() == '&' && /* prevent && syntax from erroring */ cr.peekCharNext() != '&')
+                        {
+                            cr.advanceChar();
+
+                            // Parse localized string ID
+                            std::stringstream ss2(std::ios_base::app | std::ios_base::out);
+                            int charsRead = 0;
+                            while (cr.position < cr.length)
+                            {
+                                char curr = cr.peekChar();
+                                if ((curr >= '0' && curr <= '9') || (curr >= 'A' && curr <= 'F') || (curr >= 'a' && curr <= 'f'))
+                                {
+                                    cr.advanceChar();
+                                    ss2 << curr;
+                                    charsRead++;
+                                }
+                                else
+                                    break;
+                            }
+                            if (charsRead != 8)
+                            {
+                                // Invalid 32-bit value
+                                data = std::make_shared<StringData>(-1, cr.position);
+                                out.emplace_back(TokenType::Error, line, col);
+                            }
+                            else
+                            {
+                                int32_t id = std::stoul(ss2.str(), nullptr, 16);
+                                data = std::make_shared<StringData>(id, 0);
+
+                                // Increase max string ID if necessary
+                                if (id > ctx->maxStringId)
+                                    ctx->maxStringId = id;
+                            }
+                        }
+                        else
+                            data = std::make_shared<StringData>(-1, cr.position);
                         if (type == '"')
-                            out.emplace_back(TokenType::String, line, col, ss.str());
+                            out.emplace_back(TokenType::String, line, col, ss.str(), data);
                         else if (type == '@')
-                            out.emplace_back(TokenType::MarkedString, line, col, ss.str());
+                            out.emplace_back(TokenType::MarkedString, line, col, ss.str(), data);
                         else // if (type == '!')
-                            out.emplace_back(TokenType::ExcludeString, line, col, ss.str());
+                            out.emplace_back(TokenType::ExcludeString, line, col, ss.str(), data);
                     }
                     else
                         out.emplace_back(TokenType::ErrorUnenclosedString, line, col);
@@ -568,7 +620,7 @@ namespace diannex
                 else
                 {
                     uint32_t line = cr.line;
-                    uint16_t col = cr.column;
+                    uint32_t col = cr.column;
                     switch (curr)
                     {
                     case '(':
@@ -913,7 +965,11 @@ namespace diannex
 
                     fs::path p = fs::absolute(ctx->currentFile).parent_path();
                     p /= ss.str();
+#if DIANNEX_OLD_INCLUDE_ORDER
+                    ctx->queue.push(p.string());
+#else
                     includes.push_back(p.string());
+#endif
                 }
                 else if (t.keywordType == KeywordType::IfDef || t.keywordType == KeywordType::IfNDef)
                 {
@@ -951,9 +1007,11 @@ namespace diannex
             }
         }
 
+#if !DIANNEX_OLD_INCLUDE_ORDER
         // Add includes to beginning of list, in reverse order
         for (auto it = includes.rbegin(); it != includes.rend(); ++it)
             ctx->queue.push_front(*it);
+#endif
     }
 
     const char* tokenToString(Token t)

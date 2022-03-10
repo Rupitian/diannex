@@ -21,6 +21,7 @@ namespace diannex
         std::string key;
         bool isComment;
         std::string text;
+        int32_t localizationStringId = -1;
     };
 
     struct LoopContext
@@ -34,7 +35,11 @@ namespace diannex
     struct CompileContext
     {
         ProjectFormat* project;
+#if DIANNEX_OLD_INCLUDE_ORDER
+        std::queue<std::string> queue;
+#else
         std::deque<std::string> queue;
+#endif
         std::string currentFile;
         std::unordered_set<std::string> files;
         std::vector<std::pair<std::string, std::vector<Token>>> tokenList;
@@ -54,6 +59,9 @@ namespace diannex
         std::vector<TranslationInfo> translationInfo;
         bool generatingFunction = false;
         int offset = 0;
+
+        int32_t maxStringId = -1;
+        std::unordered_map<std::string, std::vector<std::pair<uint32_t, int32_t>>> stringIdPositions;
 
         ~CompileContext();
 

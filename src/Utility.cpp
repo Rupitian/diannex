@@ -29,7 +29,8 @@ namespace diannex
                                  {"translation_public", false},
                                  {"translation_public_name", ""},
                                  {"compression", true},
-                                 {"macros", nlohmann::json::array()}
+                                 {"macros", nlohmann::json::array()},
+                                 {"add_string_ids", false},
                          }}
         };
 
@@ -144,6 +145,10 @@ namespace diannex
         proj.options.compression = project["options"].contains("compression") ?
                                    project["options"]["compression"].get<bool>() :
                                    true;
+
+        proj.options.addStringIds = project["options"].contains("add_string_ids") ?
+                                    project["options"]["add_string_ids"].get<bool>() :
+                                    false;
 
         if (project["options"].contains("macros"))
         {

@@ -46,6 +46,9 @@ namespace diannex
 
         // Predefined macros/defines to be used in source files. default: None
         std::unordered_map<std::string, std::string> macros;
+
+        // Whether or not to add new string IDs to files. default: false
+        bool addStringIds;
     };
 
     struct ProjectFormat

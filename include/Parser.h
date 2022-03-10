@@ -29,7 +29,7 @@ namespace diannex
 
         ErrorType type;
         uint32_t line;
-        uint16_t column;
+        uint32_t column;
         const char* info1;
         const char* info2;
     };
@@ -64,7 +64,7 @@ namespace diannex
         std::vector<ParseError> errors;
         CompileContext* context;
         uint32_t defaultLine = 0;
-        uint16_t defaultColumn = 0;
+        uint32_t defaultColumn = 0;
     private:
         Parser();
 
@@ -197,9 +197,10 @@ namespace diannex
     class NodeText : public NodeContent
     {
     public:
-        NodeText(NodeType type, std::string content, bool excludeTranslation);
-        NodeText(std::string content, bool excludeTranslation);
+        NodeText(NodeType type, std::string content, std::shared_ptr<StringData> stringData, bool excludeTranslation);
+        NodeText(std::string content, std::shared_ptr<StringData> stringData, bool excludeTranslation);
         bool excludeTranslation;
+        std::shared_ptr<StringData> stringData;
     private:
         NodeText(const NodeText&) = delete;
     };
@@ -258,10 +259,11 @@ namespace diannex
     class NodeDefinition : public Node
     {
     public:
-        NodeDefinition(std::string key, std::string value, bool excludeValueTranslation);
+        NodeDefinition(std::string key, std::string value, std::shared_ptr<StringData> stringData, bool excludeValueTranslation);
 
         std::string key;
         std::string value;
+        std::shared_ptr<StringData> stringData;
         bool excludeValueTranslation;
     private:
         NodeDefinition(const NodeDefinition&) = delete;

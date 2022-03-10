@@ -295,13 +295,13 @@ namespace diannex
     {
     }
 
-    NodeText::NodeText(NodeType type, std::string content, bool excludeTranslation)
-        : NodeContent(content, type), excludeTranslation(excludeTranslation)
+    NodeText::NodeText(NodeType type, std::string content, std::shared_ptr<StringData> stringData, bool excludeTranslation)
+        : NodeContent(content, type), stringData(stringData), excludeTranslation(excludeTranslation)
     {
     }
 
-    NodeText::NodeText(std::string content, bool excludeTranslation)
-        : NodeContent(content, NodeType::TextRun), excludeTranslation(excludeTranslation)
+    NodeText::NodeText(std::string content, std::shared_ptr<StringData> stringData, bool excludeTranslation)
+        : NodeContent(content, NodeType::TextRun), stringData(stringData), excludeTranslation(excludeTranslation)
     {
     }
 
@@ -479,7 +479,8 @@ namespace diannex
                 parser->skipNewlines();
 
                 node->flags.push_back(flag);
-            } while (parser->isNextToken(TokenType::Comma));
+            } 
+            while (parser->isNextToken(TokenType::Comma));
         }
     }
 
@@ -673,7 +674,7 @@ namespace diannex
                 {
                     if (t.type == TokenType::MarkedString)
                         parser->errors.push_back({ ParseError::ErrorType::UnexpectedMarkedString, t.line, t.column });
-                    NodeText* res = new NodeText(t.content, t.type == TokenType::ExcludeString);
+                    NodeText* res = new NodeText(t.content, t.stringData, t.type == TokenType::ExcludeString);
                     res->content = Parser::ProcessStringInterpolation(parser, t, t.content, &res->nodes);
                     return res;
                 }
@@ -698,7 +699,7 @@ namespace diannex
                     case TokenType::String:
                     case TokenType::ExcludeString:
                     {
-                        NodeText* text = new NodeText(next.content, next.type == TokenType::ExcludeString);
+                        NodeText* text = new NodeText(next.content, next.stringData, next.type == TokenType::ExcludeString);
                         text->content = Parser::ProcessStringInterpolation(parser, next, next.content, &text->nodes);
                         res->nodes.push_back(text);
                         parser->advance();
@@ -727,7 +728,7 @@ namespace diannex
                         case TokenType::MarkedString:
                         case TokenType::ExcludeString:
                         {
-                            NodeText* text = new NodeText(NodeType::ChoiceText, val.content, val.type == TokenType::ExcludeString);
+                            NodeText* text = new NodeText(NodeType::ChoiceText, val.content, val.stringData, val.type == TokenType::ExcludeString);
                             text->content = Parser::ProcessStringInterpolation(parser, val, val.content, &text->nodes);
                             res->nodes.push_back(text);
                             parser->advance();
@@ -1426,7 +1427,8 @@ namespace diannex
                 parser->skipNewlines();
                 parser->ensureToken(TokenType::CloseBrack);
                 parser->skipNewlines();
-            } while (parser->isMore() && parser->isNextToken(TokenType::OpenBrack));
+            } 
+            while (parser->isMore() && parser->isNextToken(TokenType::OpenBrack));
 
             return arrayRes;
         }
@@ -1913,7 +1915,7 @@ namespace diannex
                 Token val = parser->ensureToken(TokenType::String, TokenType::ExcludeString);
                 if (val.type != TokenType::Error)
                 {
-                    NodeDefinition* def = new NodeDefinition(t.content, val.content, val.type != TokenType::String);
+                    NodeDefinition* def = new NodeDefinition(t.content, val.content, val.stringData, val.type != TokenType::String);
                     def->value = Parser::ProcessStringInterpolation(parser, val, val.content, &def->nodes);
                     return def;
                 }
@@ -1932,8 +1934,8 @@ namespace diannex
         return nullptr;
     }
 
-    NodeDefinition::NodeDefinition(std::string key, std::string value, bool excludeValueTranslation) 
-        : Node(NodeType::Definition), key(key), value(value), excludeValueTranslation(excludeValueTranslation)
+    NodeDefinition::NodeDefinition(std::string key, std::string value, std::shared_ptr<StringData> stringData, bool excludeValueTranslation)
+        : Node(NodeType::Definition), key(key), value(value), stringData(stringData), excludeValueTranslation(excludeValueTranslation)
     {
     }
 }

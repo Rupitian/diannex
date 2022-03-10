@@ -2,6 +2,7 @@
 #define DIANNEX_TOKEN_H
 
 #include <string>
+#include <memory>
 
 namespace diannex
 {
@@ -123,17 +124,27 @@ namespace diannex
         EndIf
     };
 
+    struct StringData
+    {
+        int32_t localizedStringId = -1;
+        uint32_t endOfStringPos = 0;
+
+        StringData(int32_t localizedStringId, uint32_t endOfStringPos);
+    };
+
     struct Token
     {
         TokenType type = TokenType::Error;
         uint32_t line = 0;
-        uint16_t column = 0;
+        uint32_t column = 0;
         KeywordType keywordType = KeywordType::None;
         std::string content; // unused if KeywordType is known
+        std::shared_ptr<StringData> stringData = nullptr;
 
-        Token(TokenType type, uint32_t line, uint16_t column);
-        Token(TokenType type, uint32_t line, uint16_t column, KeywordType keywordType);
-        Token(TokenType type, uint32_t line, uint16_t column, std::string content);
+        Token(TokenType type, uint32_t line, uint32_t column);
+        Token(TokenType type, uint32_t line, uint32_t column, KeywordType keywordType);
+        Token(TokenType type, uint32_t line, uint32_t column, std::string content);
+        Token(TokenType type, uint32_t line, uint32_t column, std::string content, std::shared_ptr<StringData> stringData);
     };
 }
 

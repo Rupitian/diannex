@@ -243,14 +243,24 @@ int main(int argc, char** argv)
     CompileContext context;
     context.project = &project;
     for (auto& file : project.options.files)
+    {
+#if DIANNEX_OLD_INCLUDE_ORDER
+        context.queue.push(file);
+#else
         context.queue.push_back(file);
+#endif
+    }
 
     // Load all of the files in the queue and lex them into tokens
     std::cout << "Lexing..." << std::endl;
     while (!context.queue.empty())
     {
         std::string file = (baseDirectory / context.queue.front()).string();
+#if DIANNEX_OLD_INCLUDE_ORDER
+        context.queue.pop();
+#else
         context.queue.pop_front();
+#endif
         std::string buf;
         try
         {
@@ -258,7 +268,7 @@ int main(int argc, char** argv)
                 throw std::runtime_error("File does not exist.");
             if (context.files.find(file) != context.files.end())
                 continue; // Already tokenized this file
-            std::ifstream f(file, std::ios::in);
+            std::ifstream f(file, std::ios::in | std::ios::binary);
             f.seekg(0, std::ios::end);
             buf.reserve(f.tellg());
             f.seekg(0, std::ios::beg);
@@ -290,6 +300,7 @@ int main(int argc, char** argv)
     std::cout << "Parsing..." << std::endl;
     for (auto& pair : context.tokenList)
     {
+        context.currentFile = pair.first;
         ParseResult* parsed = Parser::ParseTokens(&context, &pair.second);
         if (parsed->errors.size() != 0)
         {
@@ -366,6 +377,12 @@ int main(int argc, char** argv)
     std::cout << "Generating bytecode..." << std::endl;
     for (auto& pair : context.parseList)
     {
+        context.currentFile = pair.first;
+
+        // Initialize string ID map for this file, if necessary
+        if (context.project->options.addStringIds)
+            context.stringIdPositions.insert(std::pair<std::string, std::vector<std::pair<uint32_t, int32_t>>>(context.currentFile, std::vector<std::pair<uint32_t, int32_t>>()));
+
         BytecodeResult* bytecode = Bytecode::Generate(pair.second, &context);
         if (bytecode->errors.size() != 0)
         {
@@ -419,6 +436,50 @@ int main(int argc, char** argv)
     {
         std::cout << std::endl << rang::fgB::red << "Not proceeding with compilation due to fatal errors." << rang::fg::reset << std::endl;
         return 1;
+    }
+
+    if (context.project->options.addStringIds)
+    {
+        // Output string IDs to necessary files
+        std::cout << "Writing string IDs..." << std::endl;
+        
+        std::vector<char> fileData;
+        for (auto& it = context.stringIdPositions.begin(); it != context.stringIdPositions.end(); ++it)
+        {
+            const std::string& currentFile = it->first;
+
+            // Make backup of new file we're processing
+            fs::copy_file(currentFile, currentFile + ".backup", fs::copy_options::overwrite_existing);
+
+            // Read in the data from the file
+            fileData.clear();
+            std::ifstream f(currentFile, std::ios::in | std::ios::binary);
+            f.seekg(0, std::ios::end);
+            fileData.reserve(f.tellg());
+            f.seekg(0, std::ios::beg);
+            fileData.assign((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+            f.close();
+
+            // Insert new IDs
+            int offset = 0;
+            std::stringstream ss(std::ios_base::app | std::ios_base::out);
+            for (const std::pair<int, int>& info : it->second)
+            {
+                ss.str(std::string());
+                ss.clear();
+                ss << '&' << std::setfill('0') << std::setw(8) << std::hex << info.second;
+                std::string ss_str = ss.str();
+                fileData.insert(fileData.begin() + info.first + offset, ss_str.begin(), ss_str.begin() + 9);
+                offset += 9;
+            }
+
+            // Save file
+            std::ofstream fileOut(currentFile, std::ios::out | std::ios::binary);
+            fileOut.write(&fileData[0], fileData.size());
+            fileOut.close();
+        }
+
+        return 0;
     }
 
     // Write binary
