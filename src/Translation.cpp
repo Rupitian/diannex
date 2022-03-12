@@ -2,6 +2,7 @@
 
 #include <sstream>
 #include <cctype>
+#include <iomanip>
 
 namespace diannex
 {
@@ -19,6 +20,8 @@ namespace diannex
         std::string prevKey = "";
         bool first = true;
         bool writtenAnything = false;
+
+        std::stringstream ss(std::ios_base::app | std::ios_base::out);
 
         for (auto it = ctx->translationInfo.begin(); it != ctx->translationInfo.end(); ++it)
         {
@@ -64,7 +67,15 @@ namespace diannex
             }
             else
             {
-                s << "\"" << SanitizeString(it->text) << "\"\n";
+                s << "\"" << SanitizeString(it->text) << "\"";
+                if (ctx->project->options.useStringIds && it->localizationStringId != -1)
+                {
+                    ss.str(std::string());
+                    ss.clear();
+                    ss << '&' << std::setfill('0') << std::setw(8) << std::hex << it->localizationStringId;
+                    s << ss.str();
+                }
+                s << "\n";
                 writtenAnything = true;
             }
 

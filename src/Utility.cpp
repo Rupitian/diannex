@@ -31,6 +31,7 @@ namespace diannex
                                  {"compression", true},
                                  {"macros", nlohmann::json::array()},
                                  {"add_string_ids", false},
+                                 {"use_string_ids", false},
                          }}
         };
 
@@ -148,6 +149,10 @@ namespace diannex
 
         proj.options.addStringIds = project["options"].contains("add_string_ids") ?
                                     project["options"]["add_string_ids"].get<bool>() :
+                                    false;
+
+        proj.options.useStringIds = project["options"].contains("use_string_ids") ?
+                                    project["options"]["use_string_ids"].get<bool>() :
                                     false;
 
         if (project["options"].contains("macros"))

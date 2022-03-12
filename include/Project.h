@@ -49,6 +49,9 @@ namespace diannex
 
         // Whether or not to add new string IDs to files. default: false
         bool addStringIds;
+
+        // Whether or not to use string IDs in private translation files. default: false
+        bool useStringIds;
     };
 
     struct ProjectFormat
