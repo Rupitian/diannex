@@ -1,10 +1,14 @@
 # Diannex
 Diannex is a text and dialogue language, designed to assist in the creation of scenes (with branching paths) and localization for games, as well as other applications.
 
-This repository contains the universal tool for working with Diannex files: it is primarily a compiler and project generator, but also a converter.
+This repository contains the universal tool for working with Diannex files: it is primarily a compiler and project generator, but also a converter and upgrader for translation files.
   
 ## About
-Diannex operates on a per-project basis, requiring either an (auto-generated) JSON project file, or arguments given via command line. Script files (.dx extension) are used to write code in, and then the project can be run through this compiler, generating an output binary file. Optionally, "translation files," with strings to be localized, can be generated. These translation files have a public and private variant (private ones containing more information), for ease of localization. These files (excluding private translation files specifically) are meant to be parsed and interpreted by a host application.
+Diannex operates on a per-project basis, requiring either an (auto-generated) JSON project file, or arguments given via command line. 
+Script files (.dx extension) are used to write code in, and then the project can be run through this compiler, generating an output binary file. 
+
+Optionally, "translation files," with strings to be localized, can be generated. These translation files have a public and private variant (private ones containing more information), for ease of localization. 
+The public versions of these files are meant to be parsed and interpreted by a host application, as they can load much more quickly.
 
 ## Your first project
 1. Download the newest release of Diannex (or build it yourself).
@@ -96,7 +100,6 @@ size - UInt32
 
 if flag->compressed
  compressedSize - UInt32
- 
  !! Everything following this is compressed with zlib (C++ Miniz) !!
 
 Scene metadata:
@@ -183,7 +186,7 @@ The tool is a command-line application, with these options which can be seen sim
 ## Building
 This project uses [CMake](https://cmake.org/) to compile, but it also requires a C++ compiler with non-experimental C++17 support. (C++17 classes shouldn't be in the `std::experimental` namespace)
 
-If you have these requirments satisfied, then you should just be able to compile with the following commands:
+If you have these requirements satisfied, then you should just be able to compile with the following commands:
 ```zsh
 $ mkdir build && cd build
 $ cmake ..
@@ -207,6 +210,9 @@ If you're using a compiler that requires linking a library for std::filesystem (
 [PeriBooty](https://github.com/PeriBooty)
 
 [MadCreativity](https://github.com/aam051102)
+
+## Special Thanks
+[BenjaminUrquhart](https://github.com/BenjaminUrquhart) for initial assistance in translation file upgrading.
 
 ## Appendix
 ### A - Hello world

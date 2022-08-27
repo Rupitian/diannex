@@ -52,14 +52,18 @@ int main(int argc, char** argv)
         .add_options()
             ("p,project", "Load project file", cxxopts::value<std::string>())
             ("g,generate", "Generate new project file", cxxopts::value<std::string>()->implicit_value(fs::current_path().filename().string()))
-            ("convert", "Convert a private file to the public format")
             ("c,cli", "Don't use a project file and read commands from cli")
             ("h,help", "Shows this message");
 
     options
-        .add_options("Conversion")
-            ("in", "Path to private input file", cxxopts::value<std::string>())
-            ("out", "Path to public output file", cxxopts::value<std::string>());
+        .add_options("Translation conversion")
+            ("convert", "Convert a translation file from private to public, or vice versa")
+            ("upgrade", "Upgrades a translation file to a newer version")
+            ("in_private", "Path to private input file", cxxopts::value<std::string>())
+            ("in_public", "Path to public input file", cxxopts::value<std::string>())
+            ("out", "Path to output file", cxxopts::value<std::string>())
+            ("in_newer", "Path to newer private input file", cxxopts::value<std::string>())
+            ("in_match", "Path to matching private input file", cxxopts::value<std::string>());
 
     options
         .add_options("Project")
@@ -80,39 +84,20 @@ int main(int argc, char** argv)
     auto result = parse_options(argc, argv, options);
 
     // Prevent incorrect usage
-    if (result.count("project") && result.count("generate"))
+    std::vector<std::string> mainCommands { "project", "generate", "convert", "upgrade", "cli" };
+    bool foundMainCommand = false;
+    for (auto& command : mainCommands)
     {
-        help(options);
-        std::cout << "\nCan't define --project and --generate at the same time!" << std::endl;
-        return 1;
-    }
-
-    if (result.count("project") && result.count("convert"))
-    {
-        help(options);
-        std::cout << "\nCan't define --project and --convert at the same time!" << std::endl;
-        return 1;
-    }
-
-    if (result.count("generate") && result.count("convert"))
-    {
-        help(options);
-        std::cout << "\nCan't define --generate and --convert at the same time!" << std::endl;
-        return 1;
-    }
-
-    if (result.count("cli") && (result.count("project") || result.count("generate") || result.count("convert")))
-    {
-        help(options);
-        std::cout << "\n--cli can't be used in conjunction with --project, --generate or --convert!" << std::endl;
-        return 1;
-    }
-
-    if ((result.count("in") || result.count("out")) && !result.count("convert"))
-    {
-        help(options);
-        std::cout << "\n--convert must be used with --in and --out" << std::endl;
-        return 1;
+        if (result.count(command))
+        {
+            if (foundMainCommand)
+            {
+                // We already found a main command!
+                help(options);
+                return 1;
+            }
+            foundMainCommand = true;
+        }
     }
 
     // --generate
@@ -125,13 +110,6 @@ int main(int argc, char** argv)
     // --convert
     if (result.count("convert"))
     {
-        if (!result.count("in"))
-        {
-            help(options);
-            std::cout << "\n--in is required for --convert!" << std::endl;
-            return 1;
-        }
-
         if (!result.count("out"))
         {
             help(options);
@@ -139,39 +117,171 @@ int main(int argc, char** argv)
             return 1;
         }
 
-        std::ifstream in;
-        std::ofstream out;
+        if (result.count("in_private"))
+        {
+            std::cout << "Converting..." << std::endl;
 
-        const std::filesystem::path& inResult = fs::absolute(result["in"].as<std::string>());
+            const std::filesystem::path& input = fs::absolute(result["in_private"].as<std::string>());
+            const std::filesystem::path& outResult = fs::absolute(result["out"].as<std::string>());
+
+            // Ensure directories exist
+            if (!fs::exists(input))
+                fs::create_directories(input.parent_path());
+            if (!fs::exists(outResult))
+                fs::create_directories(outResult.parent_path());
+
+            // Open files, check that they were opened properly
+            std::ifstream in;
+            std::ofstream out;
+            in.open(input, std::ios_base::binary | std::ios_base::in);
+            out.open(outResult, std::ios_base::binary | std::ios_base::out | std::ios_base::trunc);
+            if (!in.is_open())
+            {
+                std::cout << std::endl << rang::fgB::red << "Failed to open input private translation file for reading!" << rang::fg::reset << std::endl;
+                return 1;
+            }
+            if (!out.is_open())
+            {
+                in.close();
+                std::cout << std::endl << rang::fgB::red << "Failed to open output public translation file for writing!" << rang::fg::reset << std::endl;
+                return 1;
+            }
+
+            // Actual operation
+            Translation::ConvertPrivateToPublic(in, out);
+
+            // Close files we opened earlier
+            in.close();
+            out.close();
+        }
+        else if (result.count("in_public"))
+        {
+            if (!result.count("in_match"))
+            {
+                help(options);
+                std::cout << "\n--in_match is required for --convert and --in_public!" << std::endl;
+                return 1;
+            }
+
+            std::cout << "Converting..." << std::endl;
+
+            const std::filesystem::path& input = fs::absolute(result["in_public"].as<std::string>());
+            const std::filesystem::path& inputMatch = fs::absolute(result["in_match"].as<std::string>());
+            const std::filesystem::path& outResult = fs::absolute(result["out"].as<std::string>());
+
+            // Ensure directories exist
+            if (!fs::exists(input))
+                fs::create_directories(input.parent_path());
+            if (!fs::exists(inputMatch))
+                fs::create_directories(inputMatch.parent_path());
+            if (!fs::exists(outResult))
+                fs::create_directories(outResult.parent_path());
+
+            // Open files, check that they were opened properly
+            std::ifstream in;
+            std::ifstream inMatch;
+            std::ofstream out;
+            in.open(input, std::ios_base::binary | std::ios_base::in);
+            inMatch.open(inputMatch, std::ios_base::binary | std::ios_base::in);
+            out.open(outResult, std::ios_base::binary | std::ios_base::out | std::ios_base::trunc);
+            if (!in.is_open())
+            {
+                std::cout << std::endl << rang::fgB::red << "Failed to open input public translation file for reading!" << rang::fg::reset << std::endl;
+                return 1;
+            }
+            if (!inMatch.is_open())
+            {
+                std::cout << std::endl << rang::fgB::red << "Failed to open input matching translation file for reading!" << rang::fg::reset << std::endl;
+                return 1;
+            }
+            if (!out.is_open())
+            {
+                in.close();
+                std::cout << std::endl << rang::fgB::red << "Failed to open output private translation file for writing!" << rang::fg::reset << std::endl;
+                return 1;
+            }
+
+            // Actual operation
+            Translation::ConvertPublicToPrivate(in, inMatch, out);
+
+            // Close files we opened earlier
+            in.close();
+            inMatch.close();
+            out.close();
+        }
+        else
+        {
+            help(options);
+            std::cout << "\n--in_private or --in_public is required for --convert!" << std::endl;
+            return 1;
+        }
+
+        std::cout << "Completed!" << std::endl;
+
+        return 0;
+    }
+
+    // -upgrade
+    if (result.count("upgrade"))
+    {
+        bool isInputPrivate = result.count("in_private");
+        if (result.count("in_public") && isInputPrivate)
+        {
+            help(options);
+            std::cout << "\n--in_private and --in_public cannot be used simultaneously!" << std::endl;
+            return 1;
+        }
+        if (!result.count("in_newer"))
+        {
+            help(options);
+            std::cout << "\n--in_newer is required for --upgrade!" << std::endl;
+            return 1;
+        }
+
+        std::cout << "Upgrading..." << std::endl;
+
+        const std::filesystem::path& input = fs::absolute(result[isInputPrivate ? "in_private" : "in_public"].as<std::string>());
+        const std::filesystem::path& inputNewer = fs::absolute(result["in_newer"].as<std::string>());
         const std::filesystem::path& outResult = fs::absolute(result["out"].as<std::string>());
 
-        if (!fs::exists(inResult))
-            fs::create_directories(inResult.parent_path());
-
+        // Ensure directories exist
+        if (!fs::exists(input))
+            fs::create_directories(input.parent_path());
+        if (!fs::exists(inputNewer))
+            fs::create_directories(inputNewer.parent_path());
         if (!fs::exists(outResult))
             fs::create_directories(outResult.parent_path());
 
-
-        std::cout << "Converting..." << std::endl;
-
-        in.open(inResult, std::ios_base::binary | std::ios_base::in);
+        // Open files, check that they were opened properly
+        std::ifstream in;
+        std::ifstream inNewer;
+        std::ofstream out;
+        in.open(input, std::ios_base::binary | std::ios_base::in);
+        inNewer.open(inputNewer, std::ios_base::binary | std::ios_base::in);
         out.open(outResult, std::ios_base::binary | std::ios_base::out | std::ios_base::trunc);
-
         if (!in.is_open())
         {
-            std::cout << std::endl << rang::fgB::red << "Failed to open input private translation file for reading!" << rang::fg::reset << std::endl;
+            std::cout << std::endl << rang::fgB::red << "Failed to open input translation file for reading!" << rang::fg::reset << std::endl;
+            return 1;
+        }
+        if (!inNewer.is_open())
+        {
+            std::cout << std::endl << rang::fgB::red << "Failed to open newer input translation file for reading!" << rang::fg::reset << std::endl;
             return 1;
         }
         if (!out.is_open())
         {
             in.close();
-            std::cout << std::endl << rang::fgB::red << "Failed to open output public translation file for writing!" << rang::fg::reset << std::endl;
+            std::cout << std::endl << rang::fgB::red << "Failed to open output translation file for writing!" << rang::fg::reset << std::endl;
             return 1;
         }
 
-        Translation::ConvertPrivateToPublic(in, out);
+        // Actual operation
+        Translation::UpgradeFileToNewer(in, isInputPrivate, inNewer, out);
 
+        // Close files we opened earlier
         in.close();
+        inNewer.close();
         out.close();
 
         std::cout << "Completed!" << std::endl;
