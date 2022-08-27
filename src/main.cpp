@@ -58,7 +58,8 @@ int main(int argc, char** argv)
     options
         .add_options("Translation conversion")
             ("convert", "Convert a translation file from private to public, or vice versa")
-            ("upgrade", "Upgrades a translation file to a newer version")
+            ("upgrade", "Upgrade a translation file to a newer version")
+            ("to_binary", "Convert a public (or private) translation file to a binary format")
             ("in_private", "Path to private input file", cxxopts::value<std::string>())
             ("in_public", "Path to public input file", cxxopts::value<std::string>())
             ("out", "Path to output file", cxxopts::value<std::string>())
@@ -84,7 +85,7 @@ int main(int argc, char** argv)
     auto result = parse_options(argc, argv, options);
 
     // Prevent incorrect usage
-    std::vector<std::string> mainCommands { "project", "generate", "convert", "upgrade", "cli" };
+    std::vector<std::string> mainCommands { "project", "generate", "convert", "upgrade", "to_binary", "cli" };
     bool foundMainCommand = false;
     for (auto& command : mainCommands)
     {
@@ -94,6 +95,7 @@ int main(int argc, char** argv)
             {
                 // We already found a main command!
                 help(options);
+                std::cout << "\nToo many main commands specified!" << std::endl;
                 return 1;
             }
             foundMainCommand = true;
@@ -191,12 +193,14 @@ int main(int argc, char** argv)
             }
             if (!inMatch.is_open())
             {
+                in.close();
                 std::cout << std::endl << rang::fgB::red << "Failed to open input matching translation file for reading!" << rang::fg::reset << std::endl;
                 return 1;
             }
             if (!out.is_open())
             {
                 in.close();
+                inMatch.close();
                 std::cout << std::endl << rang::fgB::red << "Failed to open output private translation file for writing!" << rang::fg::reset << std::endl;
                 return 1;
             }
@@ -225,10 +229,19 @@ int main(int argc, char** argv)
     if (result.count("upgrade"))
     {
         bool isInputPrivate = result.count("in_private");
-        if (result.count("in_public") && isInputPrivate)
+        if (result.count("in_public"))
+        {
+            if (isInputPrivate)
+            {
+                help(options);
+                std::cout << "\n--in_private and --in_public cannot be used simultaneously!" << std::endl;
+                return 1;
+            }
+        }
+        else if (!isInputPrivate)
         {
             help(options);
-            std::cout << "\n--in_private and --in_public cannot be used simultaneously!" << std::endl;
+            std::cout << "\n--in_private or --in_public must be specified!" << std::endl;
             return 1;
         }
         if (!result.count("in_newer"))
@@ -266,12 +279,14 @@ int main(int argc, char** argv)
         }
         if (!inNewer.is_open())
         {
+            in.close();
             std::cout << std::endl << rang::fgB::red << "Failed to open newer input translation file for reading!" << rang::fg::reset << std::endl;
             return 1;
         }
         if (!out.is_open())
         {
             in.close();
+            inNewer.close();
             std::cout << std::endl << rang::fgB::red << "Failed to open output translation file for writing!" << rang::fg::reset << std::endl;
             return 1;
         }
@@ -283,6 +298,66 @@ int main(int argc, char** argv)
         in.close();
         inNewer.close();
         out.close();
+
+        std::cout << "Completed!" << std::endl;
+
+        return 0;
+    }
+
+    // --to_binary
+    if (result.count("to_binary"))
+    {
+        bool isInputPrivate = result.count("in_private");
+        if (result.count("in_public"))
+        {
+            if (isInputPrivate)
+            {
+                help(options);
+                std::cout << "\n--in_private and --in_public cannot be used simultaneously!" << std::endl;
+                return 1;
+            }
+        }
+        else if (!isInputPrivate)
+        {
+            help(options);
+            std::cout << "\n--in_private or --in_public must be specified!" << std::endl;
+            return 1;
+        }
+
+        std::cout << "Converting to binary format..." << std::endl;
+
+        const std::filesystem::path& input = fs::absolute(result[isInputPrivate ? "in_private" : "in_public"].as<std::string>());
+        const std::filesystem::path& outResult = fs::absolute(result["out"].as<std::string>());
+
+        // Ensure directories exist
+        if (!fs::exists(input))
+            fs::create_directories(input.parent_path());
+        if (!fs::exists(outResult))
+            fs::create_directories(outResult.parent_path());
+
+        {
+            // Open files, check that they were opened properly
+            std::ifstream in;
+            BinaryFileWriter out(outResult.string());
+            in.open(input, std::ios_base::binary | std::ios_base::in);
+            if (!in.is_open())
+            {
+                std::cout << std::endl << rang::fgB::red << "Failed to open input translation file for reading!" << rang::fg::reset << std::endl;
+                return 1;
+            }
+            if (!out.CanWrite())
+            {
+                in.close();
+                std::cout << std::endl << rang::fgB::red << "Failed to open output binary file for writing!" << rang::fg::reset << std::endl;
+                return 1;
+            }
+
+            // Actual operation
+            Translation::ConvertToBinary(in, isInputPrivate, out);
+
+            // Close file we opened earlier (BinaryFileWriter closes upon exiting scope)
+            in.close();
+        }
 
         std::cout << "Completed!" << std::endl;
 

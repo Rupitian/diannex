@@ -26,7 +26,7 @@ namespace diannex
     bool Binary::Write(BinaryWriter* bw, CompileContext* ctx)
     {
         bw->WriteBytes("DNX", 3);
-        bw->WriteUInt8(4); // Version
+        bw->WriteUInt8(DIANNEX_BINARY_VERSION);
 
         // Flags
         bool compressed = ctx->project->options.compression,
@@ -159,15 +159,19 @@ namespace diannex
         {
             uint32_t count = 0;
             for (auto it = ctx->translationInfo.begin(); it != ctx->translationInfo.end(); ++it)
+            {
                 if (!it->isComment)
                     count++;
+            }
 
             begin = bmw.GetSize();
             bmw.WriteUInt32(0);
             bmw.WriteUInt32(count);
             for (auto it = ctx->translationInfo.begin(); it != ctx->translationInfo.end(); ++it)
+            {
                 if (!it->isComment)
                     bmw.WriteString(it->text);
+            }
             bmw.SizePatch(begin);
         }
 
@@ -195,6 +199,18 @@ namespace diannex
             bw->WriteUInt32(size);
             bw->WriteBytes(bmw.GetBuffer(), size);
         }
+
+        return true;
+    }
+
+    bool Binary::WriteTranslationText(BinaryWriter* bw, const std::vector<std::string>& text)
+    {
+        bw->WriteBytes("DXT", 3);
+        bw->WriteUInt8(DIANNEX_BINARY_TRANSLATION_VERSION);
+
+        bw->WriteUInt32((uint32_t)text.size());
+        for (auto it = text.begin(); it != text.end(); ++it)
+             bw->WriteString(*it);
 
         return true;
     }

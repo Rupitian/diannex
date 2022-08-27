@@ -1,5 +1,7 @@
 #include "Translation.h"
 
+#include "Binary.h"
+
 #include <sstream>
 #include <cctype>
 #include <iomanip>
@@ -13,7 +15,7 @@ namespace diannex
         for (auto it = ctx->translationInfo.begin(); it != ctx->translationInfo.end(); ++it)
         {
             if (!it->isComment)
-                s << SanitizeString(it->text) << "\n";
+                s << EscapeString(it->text) << "\n";
         }
     }
 
@@ -69,7 +71,7 @@ namespace diannex
             }
             else
             {
-                s << "\"" << SanitizeString(it->text) << "\"";
+                s << "\"" << EscapeString(it->text) << "\"";
                 if (ctx->project->options.useStringIds && it->localizationStringId != -1)
                 {
                     ss.str(std::string());
@@ -234,7 +236,36 @@ namespace diannex
         }
     }
 
-    std::string Translation::SanitizeString(const std::string& str)
+    void Translation::ConvertToBinary(std::ifstream& in, bool isInputPrivate, BinaryWriter& bw)
+    {
+        std::string text{};
+        std::vector<std::string> strings{};
+
+        if (isInputPrivate)
+        {
+            // Iterate over all lines of private input file
+            while (std::getline(in, text))
+            {
+                const size_t infoStart = text.find_first_not_of(' ');
+                if (infoStart != std::string::npos && text[infoStart] == '"')
+                {
+                    // Add string to list
+                    const std::string& contents = text.substr(infoStart + 1, text.find_last_of('"') - infoStart - 1);
+                    strings.push_back(UnescapeString(contents));
+                }
+            }
+        }
+        else
+        {
+            // Iterate over all lines of public input file
+            while (std::getline(in, text))
+                strings.push_back(UnescapeString(text));
+        }
+
+        Binary::WriteTranslationText(&bw, strings);
+    }
+
+    std::string Translation::EscapeString(const std::string& str)
     {
         std::stringstream ss(std::ios_base::app | std::ios_base::out);
 
@@ -273,6 +304,70 @@ namespace diannex
             default:
                 ss << c;
                 break;
+            }
+        }
+
+        return ss.str();
+    }
+
+    std::string Translation::UnescapeString(const std::string& str)
+    {
+        std::stringstream ss(std::ios_base::app | std::ios_base::out);
+
+        for (auto it = str.begin(); it != str.end(); ++it)
+        {
+            const char c = *it;
+            if (c == '\\')
+            {
+                ++it;
+                if (it != str.end())
+                {
+                    // Add escaped character
+                    const char escaped = *it;
+                    switch (escaped)
+                    {
+                        case 'a':
+                            ss << '\a';
+                            break;
+                        case 'n':
+                            ss << '\n';
+                            break;
+                        case 'r':
+                            ss << '\r';
+                            break;
+                        case 't':
+                            ss << '\t';
+                            break;
+                        case 'v':
+                            ss << '\v';
+                            break;
+                        case 'f':
+                            ss << '\f';
+                            break;
+                        case 'b':
+                            ss << '\b';
+                            break;
+                        case '\"':
+                            ss << '\"';
+                            break;
+                        case '\\':
+                            ss << '\\';
+                            break;
+                        default:
+                            ss << escaped;
+                            break;
+                    }
+                }
+                else
+                {
+                    // Escaping nothing... just treat it as a backslash I guess? This is possible inside public files, mainly
+                    ss << '\\';
+                }
+            }
+            else
+            {
+                // Normal character
+                ss << c;
             }
         }
 

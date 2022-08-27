@@ -20,7 +20,10 @@ namespace diannex
 
         static void UpgradeFileToNewer(std::ifstream& in, bool isInputPrivate, std::ifstream& inNewer, std::ofstream& out);
 
-        static std::string SanitizeString(const std::string& str);
+        static void ConvertToBinary(std::ifstream& in, bool isInputPrivate, BinaryWriter& bw);
+
+        static std::string EscapeString(const std::string& str);
+        static std::string UnescapeString(const std::string& str);
     private:
         Translation();
     };
