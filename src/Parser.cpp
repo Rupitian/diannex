@@ -54,8 +54,10 @@ namespace diannex
                     else
                         ss << curr;
                 }
+                else
+                    parse = true;
 
-                if (parse || pos == 0)
+                if (parse)
                 {
                     // Extract the substring
                     pos += 2;
@@ -1577,6 +1579,7 @@ namespace diannex
 
                         if (!parser->isMore())
                             break;
+                        t = parser->peekToken();
                     }
                 }
 
@@ -1619,6 +1622,7 @@ namespace diannex
 
                         if (!parser->isMore())
                             break;
+                        t = parser->peekToken();
                     }
                 }
 
@@ -1661,6 +1665,7 @@ namespace diannex
 
                         if (!parser->isMore())
                             break;
+                        t = parser->peekToken();
                     }
                 }
 
@@ -1707,6 +1712,7 @@ namespace diannex
 
                         if (!parser->isMore())
                             break;
+                        t = parser->peekToken();
                     }
                 }
 
