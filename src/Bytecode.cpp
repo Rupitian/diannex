@@ -1316,15 +1316,69 @@ namespace diannex
             {
             case TokenType::Number:
                 if (constant->token.content.find('.') == std::string::npos)
-                    ctx->bytecode.push_back(Instruction::make_int(&ctx->offset, Instruction::Opcode::pushi, std::stoi(constant->token.content)));
+                {
+                    int converted = 0;
+                    try
+                    {
+                        converted = std::stoi(constant->token.content);
+                    }
+                    catch (const std::exception&)
+                    {
+                        // Use a double instead...
+                        try
+                        {
+                            ctx->bytecode.push_back(Instruction::make_double(&ctx->offset, Instruction::Opcode::pushd, std::stod(constant->token.content)));
+                        }
+                        catch (const std::exception&)
+                        {
+                            // Just use infinity as failsafe
+                            ctx->bytecode.push_back(Instruction::make_double(&ctx->offset, Instruction::Opcode::pushd, HUGE_VAL));
+                        }
+                        break;
+                    }
+                    ctx->bytecode.push_back(Instruction::make_int(&ctx->offset, Instruction::Opcode::pushi, converted));
+                }
                 else
-                    ctx->bytecode.push_back(Instruction::make_double(&ctx->offset, Instruction::Opcode::pushd, std::stod(constant->token.content)));
+                {
+                    try
+                    {
+                        ctx->bytecode.push_back(Instruction::make_double(&ctx->offset, Instruction::Opcode::pushd, std::stod(constant->token.content)));
+                    }
+                    catch (const std::exception&)
+                    {
+                        // Just use infinity as failsafe
+                        ctx->bytecode.push_back(Instruction::make_double(&ctx->offset, Instruction::Opcode::pushd, HUGE_VAL));
+                    }
+                }
                 break;
             case TokenType::Percentage:
                 if (constant->token.content.find('.') == std::string::npos)
-                    ctx->bytecode.push_back(Instruction::make_double(&ctx->offset, Instruction::Opcode::pushd, std::stoi(constant->token.content) / 100.0));
+                {
+                    int converted = 0;
+                    try
+                    {
+                        converted = std::stoi(constant->token.content);
+                    }
+                    catch (const std::exception&)
+                    {
+                        // Use a double instead...
+                        try
+                        {
+                            ctx->bytecode.push_back(Instruction::make_double(&ctx->offset, Instruction::Opcode::pushd, std::stod(constant->token.content) / 100.0));
+                        }
+                        catch (const std::exception&)
+                        {
+                            // Just use infinity as failsafe
+                            ctx->bytecode.push_back(Instruction::make_double(&ctx->offset, Instruction::Opcode::pushd, HUGE_VAL));
+                        }
+                        break;
+                    }
+                    ctx->bytecode.push_back(Instruction::make_double(&ctx->offset, Instruction::Opcode::pushd, converted / 100.0));
+                }
                 else
+                {
                     ctx->bytecode.push_back(Instruction::make_double(&ctx->offset, Instruction::Opcode::pushd, std::stod(constant->token.content) / 100.0));
+                }
                 break;
             case TokenType::String: // todo: add default setting to project file?
             case TokenType::ExcludeString:
