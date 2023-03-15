@@ -106,7 +106,7 @@ namespace diannex
 
     static void pushLoopContext(CompileContext* ctx, std::vector<Instruction::Opcode> cleanup = {})
     {
-        ctx->loopStack.push_back({ std::vector<int>(), std::vector<int>(), cleanup, (int)ctx->localCountStack.size() - 1 });
+        ctx->loopStack.push_back({ std::vector<int>(), std::vector<int>(), cleanup, (int)ctx->localCountStack.size() });
     }
 
     static void popLoopContext(int continueInd, CompileContext* ctx, BytecodeResult* res = nullptr)
@@ -784,9 +784,7 @@ namespace diannex
         }
         case Node::NodeType::Switch:
         {
-            LoopContext* enclosing = nullptr;
-            if (ctx->loopStack.size() != 0)
-                enclosing = &ctx->loopStack.back();
+            bool hasEnclosing = (ctx->loopStack.size() != 0);
 
             GenerateExpression(statement->nodes.at(0), ctx, res);
             pushLocalContext(ctx);
@@ -849,7 +847,7 @@ namespace diannex
                     GenerateSceneStatement(statement->nodes.at(i), ctx, res);
             }
 
-            if (enclosing && ctx->loopStack.back().continuePatch.size() != 0)
+            if (hasEnclosing && ctx->loopStack.back().continuePatch.size() != 0)
             {
                 int end = patchInstruction(Instruction::Opcode::j, ctx);
                 popLoopContextContinue(ctx->bytecode.size(), ctx);
@@ -870,9 +868,7 @@ namespace diannex
         }
         case Node::NodeType::SwitchSimple:
         {
-            LoopContext* enclosing = nullptr;
-            if (ctx->loopStack.size() != 0)
-                enclosing = &ctx->loopStack.back();
+            bool hasEnclosing = (ctx->loopStack.size() != 0);
 
             GenerateExpression(statement->nodes.at(0), ctx, res);
             pushLocalContext(ctx);
@@ -939,7 +935,7 @@ namespace diannex
                 counter++;
             }
 
-            if (enclosing && ctx->loopStack.back().continuePatch.size() != 0)
+            if (hasEnclosing && ctx->loopStack.back().continuePatch.size() != 0)
             {
                 int end = patchInstruction(Instruction::Opcode::j, ctx);
                 popLoopContextContinue(ctx->bytecode.size(), ctx);
