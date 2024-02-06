@@ -205,6 +205,9 @@ namespace diannex
             case Opcode::pushd:
                 bw->WriteDouble(argDouble);
                 break;
+            default:
+                // explicitly do nothing - invalid opcode
+                break;
             }
         }
     };

@@ -629,7 +629,7 @@ int main(int argc, char** argv)
         std::cout << "Writing string IDs..." << std::endl;
         
         std::vector<char> fileData;
-        for (auto& it = context.stringIdPositions.begin(); it != context.stringIdPositions.end(); ++it)
+        for (auto it = context.stringIdPositions.begin(); it != context.stringIdPositions.end(); ++it)
         {
             const std::string& currentFile = it->first;
 
