@@ -10,6 +10,14 @@
 
 namespace diannex
 {
+    // Helper function to get rid of Windows newline characters that can mess with formatting
+    inline std::string& FixWinNewlines(std::string& str)
+    {
+        if (str[str.length() - 1] == '\r')
+            str.pop_back();
+        return str;
+    }
+
     void Translation::GeneratePublicFile(std::ofstream& s, CompileContext* ctx)
     {
         for (auto it = ctx->translationInfo.begin(); it != ctx->translationInfo.end(); ++it)
@@ -96,6 +104,7 @@ namespace diannex
         
         while (std::getline(in, text))
         {
+            text = FixWinNewlines(text);
             const size_t infoStart = text.find_first_not_of(' ');
             if (infoStart != std::string::npos && text[infoStart] == '"')
             {
@@ -116,12 +125,14 @@ namespace diannex
         std::string textPublic{};
         while (std::getline(inMatch, text))
         {
+            text = FixWinNewlines(text);
             const size_t infoStart = text.find_first_not_of(' ');
             if (infoStart != std::string::npos && text[infoStart] == '"')
             {
                 // Replace this string with public file's version of the string
                 if (std::getline(in, textPublic))
                 {
+                    textPublic = FixWinNewlines(textPublic);
                     out << "\"" << textPublic << text.substr(text.find_last_of('"')) << "\n";
                 }
                 else
@@ -148,6 +159,7 @@ namespace diannex
             // Iterate over all lines of private input file, pair IDs to strings
             while (std::getline(in, text))
             {
+                text = FixWinNewlines(text);
                 const size_t infoStart = text.find_first_not_of(' ');
                 if (infoStart != std::string::npos && text[infoStart] == '"')
                 {
@@ -183,7 +195,7 @@ namespace diannex
             int currentId = 0;
             while (std::getline(in, text))
             {
-                inputStringsById[currentId] = text;
+                inputStringsById[currentId] = FixWinNewlines(text);
                 currentId++;
             }
         }
@@ -191,6 +203,7 @@ namespace diannex
         // Iterate over newer file's lines, write "upgraded" lines to output file
         while (std::getline(inNewer, text))
         {
+            text = FixWinNewlines(text);
             const size_t infoStart = text.find_first_not_of(' ');
             if (infoStart != std::string::npos && text[infoStart] == '"')
             {
@@ -246,6 +259,7 @@ namespace diannex
             // Iterate over all lines of private input file
             while (std::getline(in, text))
             {
+                text = FixWinNewlines(text);
                 const size_t infoStart = text.find_first_not_of(' ');
                 if (infoStart != std::string::npos && text[infoStart] == '"')
                 {
@@ -259,7 +273,7 @@ namespace diannex
         {
             // Iterate over all lines of public input file
             while (std::getline(in, text))
-                strings.push_back(UnescapeString(text));
+                strings.push_back(UnescapeString(FixWinNewlines(text)));
         }
 
         Binary::WriteTranslationText(&bw, strings);
