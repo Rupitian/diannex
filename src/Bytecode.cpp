@@ -1,6 +1,7 @@
 #include "Bytecode.h"
 
 #include <sstream>
+#include <cmath>
 
 namespace diannex
 {
