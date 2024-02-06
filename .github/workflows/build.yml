@@ -21,7 +21,7 @@ jobs:
           - os: windows-latest
             c_compiler: cl
             cpp_compiler: cl
-            executable_name: diannex.exe
+            executable_name: Release/diannex.exe
             output_executable_name: diannex-win64.exe
           - os: ubuntu-latest
             c_compiler: gcc
