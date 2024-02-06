@@ -396,6 +396,8 @@ namespace diannex
                             return Node::ParseSceneBlock(parser, name);
                         case KeywordType::Def:
                             return Node::ParseDefinitionBlock(parser, name);
+                        default:
+                            break;
                         }
                     }
                     else
@@ -1873,6 +1875,8 @@ namespace diannex
             {
                 return Node::ParseFunction(parser);
             }
+            default:
+                break;
             }
 
             if (!parser->checkErrorToken(t))

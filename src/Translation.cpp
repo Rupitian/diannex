@@ -229,7 +229,7 @@ namespace diannex
                     exit(1);
                 }
 
-                auto& older = inputStringsById.find(id);
+                auto older = inputStringsById.find(id);
                 if (older != inputStringsById.end())
                 {
                     // If ID exists in older input, make the old input replace this line

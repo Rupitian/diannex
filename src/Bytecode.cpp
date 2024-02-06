@@ -325,6 +325,8 @@ namespace diannex
                 ctx->symbolStack.pop_back();
                 break;
             }
+            default:
+                break;
             }
         }
     }
@@ -506,6 +508,8 @@ namespace diannex
                     case TokenType::BitwiseXorEquals:
                         ctx->bytecode.emplace_back(&ctx->offset, Instruction::Opcode::bitxor);
                         break;
+                    default:
+                        break;
                     }
                 }
 
@@ -551,6 +555,8 @@ namespace diannex
                         GenerateExpression(sc->nodes.at(i), ctx, res);
                     ctx->bytecode.push_back(Instruction::make_int2(&ctx->offset, Instruction::Opcode::pushints, translationInfo(ctx, sc->token.content, sc->token.stringData.get()), sc->nodes.size()));
                 }
+                break;
+            default:
                 break;
             }
             patchCall(1, "char", ctx, res);
@@ -789,7 +795,7 @@ namespace diannex
 
             GenerateExpression(statement->nodes.at(0), ctx, res);
             pushLocalContext(ctx);
-            pushLoopContext(ctx, { {Instruction::Opcode::pop} });
+            pushLoopContext(ctx, { Instruction::Opcode::pop });
 
             std::vector<std::pair<int /* patch */, int /* index in nodes */>> cases;
 
@@ -873,7 +879,7 @@ namespace diannex
 
             GenerateExpression(statement->nodes.at(0), ctx, res);
             pushLocalContext(ctx);
-            pushLoopContext(ctx, { {Instruction::Opcode::pop} });
+            pushLoopContext(ctx, { Instruction::Opcode::pop });
 
             std::vector<int> jumps;
 
@@ -1044,7 +1050,7 @@ namespace diannex
             int top = ctx->offset;
             GenerateExpression(statement->nodes.at(0), ctx, res);
             pushLocalContext(ctx);
-            pushLoopContext(ctx, { {Instruction::Opcode::pop} });
+            pushLoopContext(ctx, { Instruction::Opcode::pop });
 
             std::vector<std::vector<int>> jumps{};
 
@@ -1180,6 +1186,8 @@ namespace diannex
         case Node::NodeType::MarkedComment:
             translationInfo(ctx, ((NodeContent*)statement)->content, nullptr, true);
             break;
+        default:
+            break;
         }
     }
 
@@ -1302,6 +1310,8 @@ namespace diannex
                 case TokenType::Power:
                     ctx->bytecode.emplace_back(&ctx->offset, Instruction::Opcode::pow);
                     break;
+                default:
+                    break;
                 }
             }
             break;
@@ -1402,6 +1412,8 @@ namespace diannex
                 break;
             case TokenType::Undefined:
                 ctx->bytecode.emplace_back(&ctx->offset, Instruction::Opcode::pushu);
+                break;
+            default:
                 break;
             }
             break;
@@ -1556,6 +1568,8 @@ namespace diannex
             patchCall(expr->nodes.size(), ((NodeContent*)expr)->content, ctx, res);
             break;
         }
+        default:
+            break;
         }
     }
 }

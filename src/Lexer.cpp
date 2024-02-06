@@ -1129,6 +1129,8 @@ namespace diannex
                 return "'def'";
             case KeywordType::Func:
                 return "'func'";
+            default:
+                break;
             }
             break;
         case TokenType::MainKeyword:
@@ -1164,6 +1166,8 @@ namespace diannex
                 return "'default'";
             case KeywordType::Sequence:
                 return "'sequence'";
+            default:
+                break;
             }
             break;
         case TokenType::MainSubKeyword:
@@ -1171,6 +1175,8 @@ namespace diannex
             {
             case KeywordType::Require:
                 return "'require'";
+            default:
+                break;
             }
             break;
         case TokenType::ModifierKeyword:
@@ -1180,7 +1186,11 @@ namespace diannex
                 return "'local'";
             case KeywordType::Global:
                 return "'global'";
+            default:
+                break;
             }
+            break;
+        default:
             break;
         }
         return "<unknown token>";
