@@ -257,7 +257,7 @@ namespace diannex
     {
         if (t.type == TokenType::Error)
         {
-            char* info = nullptr;
+            const char* info = nullptr;
             if (t.content.compare("recursive_macro") == 0)
                 info = "Recursive macro definition.";
             else if (t.content.compare("unexpected_eof") == 0)

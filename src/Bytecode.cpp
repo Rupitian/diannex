@@ -42,7 +42,7 @@ namespace diannex
             if (stringData->localizedStringId == -1)
             {
                 auto& vec = ctx->stringIdPositions[ctx->currentFile];
-                auto& pair = std::make_pair(stringData->endOfStringPos, ++ctx->maxStringId);
+                auto pair = std::make_pair(stringData->endOfStringPos, ++ctx->maxStringId);
                 vec.insert(std::upper_bound(vec.begin(), vec.end(), pair), pair);
             }
         }
@@ -1328,7 +1328,7 @@ namespace diannex
                         catch (const std::exception&)
                         {
                             // Just use infinity as failsafe
-                            ctx->bytecode.push_back(Instruction::make_double(&ctx->offset, Instruction::Opcode::pushd, HUGE_VAL));
+                            ctx->bytecode.push_back(Instruction::make_double(&ctx->offset, Instruction::Opcode::pushd, INFINITY));
                         }
                         break;
                     }
@@ -1343,7 +1343,7 @@ namespace diannex
                     catch (const std::exception&)
                     {
                         // Just use infinity as failsafe
-                        ctx->bytecode.push_back(Instruction::make_double(&ctx->offset, Instruction::Opcode::pushd, HUGE_VAL));
+                        ctx->bytecode.push_back(Instruction::make_double(&ctx->offset, Instruction::Opcode::pushd, INFINITY));
                     }
                 }
                 break;
@@ -1365,7 +1365,7 @@ namespace diannex
                         catch (const std::exception&)
                         {
                             // Just use infinity as failsafe
-                            ctx->bytecode.push_back(Instruction::make_double(&ctx->offset, Instruction::Opcode::pushd, HUGE_VAL));
+                            ctx->bytecode.push_back(Instruction::make_double(&ctx->offset, Instruction::Opcode::pushd, INFINITY));
                         }
                         break;
                     }
