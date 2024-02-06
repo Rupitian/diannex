@@ -64,7 +64,7 @@ jobs:
     - name: Upload
       uses: actions/upload-artifact@v4
       with:
-        path: ${{ matrix.executable_name }}
+        path: ${{ steps.strings.outputs.build-output-dir }}/${{ matrix.executable_name }}
         name: ${{ matrix.output_executable_name }}
 
     - name: Test
