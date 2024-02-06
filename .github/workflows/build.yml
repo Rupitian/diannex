@@ -22,17 +22,17 @@ jobs:
             c_compiler: cl
             cpp_compiler: cl
             executable_name: Release/diannex.exe
-            output_executable_name: diannex-win64.zip
+            output_executable_name: diannex-win64
           - os: ubuntu-latest
             c_compiler: gcc
             cpp_compiler: g++
             executable_name: diannex
-            output_executable_name: diannex-gcc-ubuntu.zip
+            output_executable_name: diannex-gcc-ubuntu
           - os: ubuntu-latest
             c_compiler: clang
             cpp_compiler: clang++
             executable_name: diannex
-            output_executable_name: diannex-clang-ubuntu.zip
+            output_executable_name: diannex-clang-ubuntu
         exclude:
           - os: windows-latest
             c_compiler: gcc
