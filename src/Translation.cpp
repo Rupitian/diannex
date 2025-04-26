@@ -374,8 +374,8 @@ namespace diannex
                 }
                 else
                 {
-                    // Escaping nothing... just treat it as a backslash I guess? This is possible inside public files, mainly
-                    ss << '\\';
+                    // Escaping nothing... ignore
+                    --it;
                 }
             }
             else

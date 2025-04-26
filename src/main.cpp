@@ -250,6 +250,12 @@ int main(int argc, char** argv)
             std::cout << "\n--in_newer is required for --upgrade!" << std::endl;
             return 1;
         }
+        if (!result.count("out"))
+        {
+            help(options);
+            std::cout << "\n--out is required for --upgrade!" << std::endl;
+            return 1;
+        }
 
         std::cout << "Upgrading..." << std::endl;
 
@@ -321,6 +327,12 @@ int main(int argc, char** argv)
         {
             help(options);
             std::cout << "\n--in_private or --in_public must be specified!" << std::endl;
+            return 1;
+        }
+        if (!result.count("out"))
+        {
+            help(options);
+            std::cout << "\n--out is required for --to_binary!" << std::endl;
             return 1;
         }
 
