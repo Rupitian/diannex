@@ -69,7 +69,7 @@ namespace diannex
                     {
                         pos++;
                         count++;
-                        if (input.at(pos) == '\n')
+                        if (pos < len && input.at(pos) == '\n')
                         {
                             tempLine++;
                             tempCol = 0;
@@ -77,24 +77,36 @@ namespace diannex
                         else
                             tempCol++;
                     }
-                    std::string exprStr = input.substr(startPos, count);
+                    char lastChar;
 
-                    // Parse expression and add to nodes
-                    std::vector<Token> tokens;
-                    Lexer::LexString(exprStr, parser->context, tokens, line, col);
-                    ParseResult parsed = Parser::ParseTokensExpression(parser->context, &tokens, line, col);
-                    if (parsed.errors.size() != 0)
-                        parser->errors.insert(parser->errors.end(), parsed.errors.begin(), parsed.errors.end());
+                    if (pos >= len)
+                        lastChar = input.at(len - 1);
                     else
-                    {
-                        nodeList->push_back(parsed.baseNode);
-                        parsed.doDelete = false;
-                    }
+                        lastChar = input.at(pos);
 
-                    // Also add the proper string representation
-                    ss << "${" << interpCount++ << "}";
-                    line = tempLine;
-                    col = tempCol + 1;
+                    if (lastChar == '}')
+                    {
+                        std::string exprStr = input.substr(startPos, count);
+
+                        // Parse expression and add to nodes
+                        std::vector<Token> tokens;
+                        Lexer::LexString(exprStr, parser->context, tokens, line, col);
+                        ParseResult parsed = Parser::ParseTokensExpression(parser->context, &tokens, line, col);
+                        if (parsed.errors.size() != 0)
+                            parser->errors.insert(parser->errors.end(), parsed.errors.begin(), parsed.errors.end());
+                        else
+                        {
+                            nodeList->push_back(parsed.baseNode);
+                            parsed.doDelete = false;
+                        }
+
+                        // Also add the proper string representation
+                        ss << "${" << interpCount++ << "}";
+                        line = tempLine;
+                        col = tempCol + 1;
+                    }
+                    else
+                        parser->errors.push_back({ ParseError::ErrorType::ExpectedTokenButEOF, (uint32_t) tempLine, (uint32_t) tempCol, "}" });
                 }
             }
             else

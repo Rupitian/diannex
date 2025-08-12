@@ -76,6 +76,7 @@ int main(int argc, char** argv)
             ("D,privname", "Name of output private translation file", cxxopts::value<std::string>(), "(default: \"out\")")
             ("d,privdir", "Directory to output private translation files", cxxopts::value<std::string>(), "(default: \"./translations\")")
             ("C,compress", "Whether or not to use compression")
+            ("I,nointerpolate", "Whether string interpolation should be disabled")
             ("files", "File(s) to compile", cxxopts::value<std::vector<std::string>>()->default_value(""));
 
 
@@ -424,7 +425,8 @@ int main(int argc, char** argv)
         project.options.translationPrivateName = result["privname"].count() == 1 ? result["privname"].as<std::string>() : "out";
         project.options.translationPrivateOutDir = result["privdir"].count() == 1 ? result["privdir"].as<std::string>() : "./translations";
         project.options.compression = result["compress"].count() == 1 ? result["compress"].as<bool>() : false;
-        loaded = true;
+        project.options.interpolationEnabled = result["nointerpolate"].count() == 0;
+	    loaded = true;
     }
 
     if (!loaded)
